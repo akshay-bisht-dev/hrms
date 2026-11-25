@@ -10,6 +10,7 @@ import { createNotificationsProcessor } from './processors/notifications.js';
 import { createFilesProcessor, createImportsProcessor } from './processors/tenant-jobs.js';
 import { createWorkSessionsProcessor } from './processors/work-sessions.js';
 import { createAttendanceService } from '@hrms/backend/modules/attendance/attendance.service.js';
+import { createLeaveService } from '@hrms/backend/modules/leave/leave.service.js';
 import { initDb, closeDb, platformDb } from '@hrms/backend/lib/db.js';
 import { createS3, storage } from '@hrms/backend/lib/storage.js';
 import { createCipher } from '@hrms/backend/lib/crypto.js';
@@ -57,6 +58,7 @@ const employees = createEmployeesService({
 });
 const imports = createImportsService({ employees, files, buckets });
 const attendance = createAttendanceService();
+const leave = createLeaveService({ attendance });
 // Fan-out jobs enqueue per-tenant children on the same queue.
 const workSessionsQueue = new Queue(QUEUES.WORK_SESSIONS, {
   connection,
@@ -83,7 +85,14 @@ const workers = [
   new Worker(
     QUEUES.WORK_SESSIONS,
     guarded(
-      createWorkSessionsProcessor({ attendance, employees, platformDb, queue: workSessionsQueue, logger }),
+      createWorkSessionsProcessor({
+        attendance,
+        employees,
+        leave,
+        platformDb,
+        queue: workSessionsQueue,
+        logger,
+      }),
     ),
     { connection, concurrency: config.WORKER_WORK_SESSIONS_CONCURRENCY },
   ),

@@ -21,6 +21,17 @@ export const WorkSessionJobs = {
   /** Repeatable: fans out one "apply future-dated job changes" job per live company. */
   'employment-apply-due': z.object({}).strict(),
   'employment-apply-due-tenant': z.object({ tenantId: z.uuid() }).strict(),
+  /** Repeatable (daily): fans out leave accruals for the current month; credits are idempotent per period. */
+  'leave-accrual': z.object({}).strict(),
+  'leave-accrual-tenant': z
+    .object({
+      tenantId: z.uuid(),
+      month: z
+        .string()
+        .regex(/^\d{4}-(0[1-9]|1[0-2])$/)
+        .optional(),
+    })
+    .strict(),
 };
 
 /** Companies whose data is still processed (cancelled and suspended ones are left alone). */
@@ -30,12 +41,13 @@ export const LIVE_TENANT_STATUSES = ['TRIAL', 'ACTIVE', 'PAST_DUE'];
  * Processor for the `work-sessions` queue: attendance roll-up and recalculation, and applying
  * future-dated employment changes. Tenant jobs run inside the tenant's context so the tenant-scoped
  * client applies exactly as for API requests.
- * @param {{ attendance: any, employees: any, platformDb: () => any, queue: { add: Function },
+ * @param {{ attendance: any, employees: any, leave?: any, platformDb: () => any, queue: { add: Function },
  *           logger: import('pino').Logger, now?: () => Date }} deps
  */
 export function createWorkSessionsProcessor({
   attendance,
   employees,
+  leave,
   platformDb,
   queue,
   logger,
@@ -68,6 +80,14 @@ export function createWorkSessionsProcessor({
         return fanOut('attendance-rollup-tenant');
       case 'employment-apply-due':
         return fanOut('employment-apply-due-tenant');
+      case 'leave-accrual':
+        return fanOut('leave-accrual-tenant');
+      case 'leave-accrual-tenant': {
+        const month = data.month ?? now().toISOString().slice(0, 7);
+        const out = await inTenant(() => leave.runAccruals(month));
+        logger.info({ tenantId: data.tenantId, month, ...out }, 'Leave accruals posted');
+        return { month, ...out };
+      }
       case 'attendance-rollup-tenant': {
         const out = await inTenant(() => attendance.rollup());
         logger.info({ tenantId: data.tenantId, ...out }, 'Attendance rolled up');

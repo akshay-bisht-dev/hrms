@@ -15,6 +15,7 @@ import {
   ymdToDate,
   zonedTime,
 } from '../../lib/time.js';
+import { toCenti } from '@hrms/shared/quantity';
 import { employeeScope } from '../employees/scope.js';
 import { DEFAULT_POLICY, MAX_SESSION_HOURS, computeDay, resolvePlan } from './engine.js';
 
@@ -184,7 +185,7 @@ export function createAttendanceService({ queues, now = () => new Date() } = {})
     if (existing?.isLocked) return existing;
 
     const ws = weekStart(ymd, emp.legalEntity?.weekStartDay ?? 1);
-    const [plan, policy, rule, punches, week] = await Promise.all([
+    const [plan, policy, rule, punches, week, leaveDays] = await Promise.all([
       planFor(emp, ymd),
       policyFor(emp.legalEntityId),
       overtimeRuleFor(emp, ymd),
@@ -198,6 +199,10 @@ export function createAttendanceService({ queues, now = () => new Date() } = {})
             _sum: { workedMinutes: true },
           })
         : null,
+      db().leaveRequestDay.findMany({
+        where: { date: workDate, request: { employeeId: emp.id, status: 'APPROVED' } },
+        select: { quantity: true },
+      }),
     ]);
     const t = now();
     const result = computeDay({
@@ -209,6 +214,10 @@ export function createAttendanceService({ queues, now = () => new Date() } = {})
       overtimeRule: rule,
       weekWorkedBefore: week?._sum.workedMinutes ?? 0,
       now: t,
+      leaveCenti: Math.min(
+        100,
+        leaveDays.reduce((s, d) => s + toCenti(String(d.quantity)), 0),
+      ),
     });
 
     // A decision stays valid only for the minutes it was made on.

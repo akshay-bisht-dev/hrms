@@ -7,6 +7,7 @@ import { companyRouter } from '../modules/company/company.routes.js';
 import { membersRouter } from '../modules/members/members.routes.js';
 import { employeesRouter } from '../modules/employees/employees.routes.js';
 import { attendanceRouter } from '../modules/attendance/attendance.routes.js';
+import { leaveRouter } from '../modules/leave/leave.routes.js';
 
 /**
  * Mounts all /api/v1 module routers. Every route must declare its access ('public', 'authenticated' or a
@@ -18,6 +19,7 @@ import { attendanceRouter } from '../modules/attendance/attendance.routes.js';
  * @param {Parameters<typeof membersRouter>[0]} [services.membersRoutes]
  * @param {Parameters<typeof employeesRouter>[0]} [services.employeesRoutes]
  * @param {Parameters<typeof attendanceRouter>[0]} [services.attendanceRoutes]
+ * @param {Parameters<typeof leaveRouter>[0]} [services.leaveRoutes]
  * @returns {import('express').Router}
  */
 export function apiRouter(services) {
@@ -51,6 +53,11 @@ export function apiRouter(services) {
     const attendance = attendanceRouter(services.attendanceRoutes);
     /** @type {any} */ (attendance).__mountpath = '/attendance';
     router.use('/attendance', attendance);
+  }
+  if (services?.leaveRoutes) {
+    const leave = leaveRouter(services.leaveRoutes);
+    /** @type {any} */ (leave).__mountpath = '/leaves';
+    router.use('/leaves', leave);
   }
   assertRoutesDeclared(router);
   return router;
