@@ -19,6 +19,12 @@ import { EmployeesPage } from '@/pages/employees/EmployeesPage';
 import { EmployeeNewPage } from '@/pages/employees/EmployeeNewPage';
 import { EmployeeImportPage } from '@/pages/employees/EmployeeImportPage';
 import { EmployeeProfilePage, MyProfileRedirect } from '@/pages/employees/EmployeeProfilePage';
+import { MyAttendancePage } from '@/pages/attendance/MyAttendancePage';
+import { TeamAttendancePage } from '@/pages/attendance/TeamAttendancePage';
+import { EmployeeAttendancePage } from '@/pages/attendance/EmployeeAttendancePage';
+import { ApprovalsPage } from '@/pages/attendance/ApprovalsPage';
+import { AttendanceReportPage } from '@/pages/attendance/AttendanceReportPage';
+import { AttendanceSettingsPage } from '@/pages/settings/AttendanceSettingsPage';
 
 /** Route table. Each sprint adds its module routes under the signed-in shell. */
 export const routes = [
@@ -50,6 +56,12 @@ export const routes = [
           { path: 'employees/import', element: <EmployeeImportPage /> },
           { path: 'employees/:id', element: <EmployeeProfilePage /> },
           { path: 'me', element: <MyProfileRedirect /> },
+          { path: 'attendance', element: <MyAttendancePage /> },
+          { path: 'attendance/team', element: <TeamAttendancePage /> },
+          { path: 'attendance/employees/:id', element: <EmployeeAttendancePage /> },
+          { path: 'attendance/approvals', element: <ApprovalsPage /> },
+          { path: 'attendance/reports', element: <AttendanceReportPage /> },
+          { path: 'settings/attendance', element: <AttendanceSettingsPage /> },
           { path: 'settings/security', element: <SecurityPage /> },
           { path: 'settings/company', element: <CompanyPage /> },
           { path: 'settings/organization', element: <OrganizationPage /> },

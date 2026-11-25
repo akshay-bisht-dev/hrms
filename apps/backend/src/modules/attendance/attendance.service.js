@@ -531,6 +531,7 @@ export function createAttendanceService({ queues, now = () => new Date() } = {})
             code: e.employeeCode,
             name: fullName(e),
             department: e.department?.name ?? null,
+            timezone: e.timezone,
           },
           day: dayDto(byEmp.get(e.id)),
         })),

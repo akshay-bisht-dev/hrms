@@ -2,8 +2,13 @@ import { Link, NavLink, Outlet } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import {
   Activity,
+  BarChart3,
   Building2,
+  CalendarClock,
+  CheckSquare,
+  Clock,
   Contact,
+  UsersRound,
   KeyRound,
   LogOut,
   Network,
@@ -20,7 +25,9 @@ import { cn } from '@/utils/cn';
 /** Sidebar + content layout. The sidebar stacks above the content on narrow screens (no fixed widths). */
 export function AppShell() {
   const { t } = useTranslation();
-  const { me, signOut, signedIn, can } = useAuth();
+  const { me, signOut, signedIn, can, scopeOf } = useAuth();
+  const viewScope = scopeOf('attendance.view');
+  const seesOthers = Boolean(viewScope && viewScope !== 'OWN');
   const qc = useQueryClient();
   const memberships = useQuery({
     queryKey: ['auth', 'memberships'],
@@ -92,6 +99,30 @@ export function AppShell() {
           {t('nav.employees')}
         </NavLink>
         <span className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-text-muted">
+          {t('nav.attendance')}
+        </span>
+        <NavLink to="/attendance" end className={link}>
+          <Clock aria-hidden="true" className="size-4" />
+          {t('nav.myAttendance')}
+        </NavLink>
+        {seesOthers && (
+          <NavLink to="/attendance/team" className={link}>
+            <UsersRound aria-hidden="true" className="size-4" />
+            {t('nav.teamAttendance')}
+          </NavLink>
+        )}
+        {/* Everyone: direct managers get their reports' requests whatever their role. */}
+        <NavLink to="/attendance/approvals" className={link}>
+          <CheckSquare aria-hidden="true" className="size-4" />
+          {t('nav.approvals')}
+        </NavLink>
+        {seesOthers && (
+          <NavLink to="/attendance/reports" className={link}>
+            <BarChart3 aria-hidden="true" className="size-4" />
+            {t('nav.attendanceReports')}
+          </NavLink>
+        )}
+        <span className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-text-muted">
           {t('nav.settings')}
         </span>
         <NavLink to="/settings/company" className={link}>
@@ -102,6 +133,12 @@ export function AppShell() {
           <Network aria-hidden="true" className="size-4" />
           {t('nav.organization')}
         </NavLink>
+        {(can('attendance.manage') || can('company.org.manage')) && (
+          <NavLink to="/settings/attendance" className={link}>
+            <CalendarClock aria-hidden="true" className="size-4" />
+            {t('nav.attendanceSettings')}
+          </NavLink>
+        )}
         {can('members.invite') && (
           <NavLink to="/settings/members" className={link}>
             <Users aria-hidden="true" className="size-4" />
