@@ -4,6 +4,7 @@ export const QUEUES = Object.freeze({
   SYSTEM: 'system',
   PAYROLL: 'payroll',
   IMPORTS: 'imports',
+  FILES: 'files',
   SCREENSHOTS: 'screenshots',
   RETENTION: 'retention',
   REPORTS: 'reports',

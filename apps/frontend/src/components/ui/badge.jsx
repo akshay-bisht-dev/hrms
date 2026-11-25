@@ -1,18 +1,21 @@
 import { cva } from 'class-variance-authority';
 import { cn } from '@/utils/cn';
 
-const badgeVariants = cva('inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium', {
-  variants: {
-    tone: {
-      neutral: 'bg-slate-100 text-text-muted',
-      info: 'bg-primary-soft text-primary-hover',
-      success: 'bg-success-soft text-success-text',
-      warning: 'bg-warning-soft text-warning-text',
-      danger: 'bg-danger-soft text-red-700',
+const badgeVariants = cva(
+  'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium',
+  {
+    variants: {
+      tone: {
+        neutral: 'bg-slate-100 text-text-muted',
+        info: 'bg-primary-soft text-primary-hover',
+        success: 'bg-success-soft text-success-text',
+        warning: 'bg-warning-soft text-warning-text',
+        danger: 'bg-danger-soft text-red-700',
+      },
     },
+    defaultVariants: { tone: 'neutral' },
   },
-  defaultVariants: { tone: 'neutral' },
-});
+);
 
 const dot = {
   neutral: 'bg-border-strong',

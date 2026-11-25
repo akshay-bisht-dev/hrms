@@ -3,7 +3,10 @@ import { z } from 'zod';
 import { Email, Password } from './auth.js';
 import { PERMISSION_CODES, DATA_SCOPES } from '../permissions.js';
 
-export const InviteBody = z.object({ email: Email, roleIds: z.array(z.uuid()).min(1).max(10) }).strict();
+export const InviteBody = z
+  .object({ email: Email, roleIds: z.array(z.uuid()).min(1).max(10), employeeId: z.uuid().optional() })
+  .strict();
+export const LinkEmployeeBody = z.object({ employeeId: z.uuid().nullable() }).strict();
 export const MemberRolesBody = z.object({ roleIds: z.array(z.uuid()).min(1).max(10) }).strict();
 export const AcceptInviteBody = z
   .object({

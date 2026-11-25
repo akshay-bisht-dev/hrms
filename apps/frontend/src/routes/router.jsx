@@ -15,6 +15,10 @@ import { OrganizationPage } from '@/pages/settings/OrganizationPage';
 import { MembersPage } from '@/pages/settings/MembersPage';
 import { RolesPage } from '@/pages/settings/RolesPage';
 import { AcceptInvitePage } from '@/pages/auth/AcceptInvitePage';
+import { EmployeesPage } from '@/pages/employees/EmployeesPage';
+import { EmployeeNewPage } from '@/pages/employees/EmployeeNewPage';
+import { EmployeeImportPage } from '@/pages/employees/EmployeeImportPage';
+import { EmployeeProfilePage, MyProfileRedirect } from '@/pages/employees/EmployeeProfilePage';
 
 /** Route table. Each sprint adds its module routes under the signed-in shell. */
 export const routes = [
@@ -41,6 +45,11 @@ export const routes = [
         element: <AppShell />,
         children: [
           { index: true, element: <SystemStatusPage /> },
+          { path: 'employees', element: <EmployeesPage /> },
+          { path: 'employees/new', element: <EmployeeNewPage /> },
+          { path: 'employees/import', element: <EmployeeImportPage /> },
+          { path: 'employees/:id', element: <EmployeeProfilePage /> },
+          { path: 'me', element: <MyProfileRedirect /> },
           { path: 'settings/security', element: <SecurityPage /> },
           { path: 'settings/company', element: <CompanyPage /> },
           { path: 'settings/organization', element: <OrganizationPage /> },

@@ -5,6 +5,7 @@ import { authRouter } from '../modules/auth/auth.routes.js';
 import { referenceRouter } from '../modules/reference/reference.routes.js';
 import { companyRouter } from '../modules/company/company.routes.js';
 import { membersRouter } from '../modules/members/members.routes.js';
+import { employeesRouter } from '../modules/employees/employees.routes.js';
 
 /**
  * Mounts all /api/v1 module routers. Every route must declare its access ('public', 'authenticated' or a
@@ -14,6 +15,7 @@ import { membersRouter } from '../modules/members/members.routes.js';
  * @param {Parameters<typeof referenceRouter>[0]} [services.referenceRoutes]
  * @param {Parameters<typeof companyRouter>[0]} [services.companyRoutes]
  * @param {Parameters<typeof membersRouter>[0]} [services.membersRoutes]
+ * @param {Parameters<typeof employeesRouter>[0]} [services.employeesRoutes]
  * @returns {import('express').Router}
  */
 export function apiRouter(services) {
@@ -37,6 +39,11 @@ export function apiRouter(services) {
     const members = membersRouter(services.membersRoutes);
     /** @type {any} */ (members).__mountpath = '/tenants';
     router.use('/tenants', members);
+  }
+  if (services?.employeesRoutes) {
+    const employees = employeesRouter(services.employeesRoutes);
+    /** @type {any} */ (employees).__mountpath = '/employees';
+    router.use('/employees', employees);
   }
   assertRoutesDeclared(router);
   return router;

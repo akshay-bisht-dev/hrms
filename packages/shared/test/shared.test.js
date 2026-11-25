@@ -230,3 +230,90 @@ describe('role schema', () => {
     ).toBe(false);
   });
 });
+
+import {
+  EmployeeCreateBody,
+  EmploymentChangeBody,
+  STATUS_TRANSITIONS,
+  BankAccountBody,
+  DocumentUploadBody,
+  ImportRow,
+} from '../src/schemas/employee.js';
+
+describe('employee schemas', () => {
+  const base = {
+    firstName: 'Priya',
+    legalEntityId: '0190f7a0-0000-7000-8000-000000000001',
+    dateOfJoining: '2026-01-05',
+  };
+  test('create: defaults and cross-field checks', () => {
+    expect(EmployeeCreateBody.parse(base)).toMatchObject({ workMode: 'OFFICE', employmentType: 'FULL_TIME' });
+    expect(EmployeeCreateBody.safeParse({ ...base, nationalId: 'ABCDE1234F' }).success).toBe(false); // type required
+    expect(EmployeeCreateBody.safeParse({ ...base, probationEndDate: '2025-12-01' }).success).toBe(false);
+    expect(EmployeeCreateBody.safeParse({ ...base, status: 'EXITED' }).success).toBe(false); // can't be created as exited
+  });
+  test('employment change must change something', () => {
+    expect(
+      EmploymentChangeBody.safeParse({ effectiveFrom: '2026-03-01', changeReason: 'PROMOTION' }).success,
+    ).toBe(false);
+    expect(
+      EmploymentChangeBody.safeParse({
+        effectiveFrom: '2026-03-01',
+        changeReason: 'PROMOTION',
+        designationId: base.legalEntityId,
+      }).success,
+    ).toBe(true);
+    expect(
+      EmploymentChangeBody.safeParse({
+        effectiveFrom: '2026-03-01',
+        changeReason: 'MANAGER_CHANGE',
+        managerId: null,
+      }).success,
+    ).toBe(true);
+  });
+  test('status transitions: exited is final', () => {
+    expect(STATUS_TRANSITIONS.EXITED).toEqual([]);
+    expect(STATUS_TRANSITIONS.ACTIVE).toContain('NOTICE');
+  });
+  test('bank account numbers are normalized', () => {
+    expect(
+      BankAccountBody.parse({
+        accountHolder: 'P',
+        accountNumber: 'gb33 bukb-2020 1555 5555 55',
+        currency: 'gbp',
+        effectiveFrom: '2026-01-01',
+      }).accountNumber,
+    ).toBe('GB33BUKB20201555555555');
+  });
+  test('documents: type allowlist and 10 MB cap', () => {
+    expect(
+      DocumentUploadBody.safeParse({
+        category: 'ID_PROOF',
+        fileName: 'a.exe',
+        mimeType: 'application/x-msdownload',
+        sizeBytes: 10,
+      }).success,
+    ).toBe(false);
+    expect(
+      DocumentUploadBody.safeParse({
+        category: 'ID_PROOF',
+        fileName: 'a.pdf',
+        mimeType: 'application/pdf',
+        sizeBytes: 11 * 1024 * 1024,
+      }).success,
+    ).toBe(false);
+  });
+  test('import rows accept blanks for optional columns', () => {
+    expect(
+      ImportRow.safeParse({
+        employeeCode: 'e-1',
+        firstName: 'A',
+        dateOfJoining: '2026-01-01',
+        workEmail: '',
+        workMode: '',
+      }).success,
+    ).toBe(true);
+    expect(ImportRow.safeParse({ firstName: 'A', dateOfJoining: '2026-01-01' }).success).toBe(false); // code required
+    expect(ImportRow.safeParse({ firstName: 'A', dateOfJoining: '01/01/2026' }).success).toBe(false);
+  });
+});

@@ -50,6 +50,7 @@ export function authenticate({ jwt, platformDb, redis }) {
         tenantId: tid,
         sessionId: sid,
         membershipId: access.membershipId,
+        employeeId: access.employeeId ?? null,
         permissions: new Map(Object.entries(access.permissions)),
         mfa: claims.mfa === true,
         access,

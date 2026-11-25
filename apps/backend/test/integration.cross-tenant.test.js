@@ -63,6 +63,44 @@ beforeAll(async () => {
     await post('/tenants/invitations', { email: h.uniqueEmail('apending'), roleIds: [ids.role] })
   ).id;
   ids.session = (await A.call('get', '/auth/sessions').expect(200)).body.data[0].id;
+  const emp = await post('/employees', {
+    firstName: 'A person',
+    legalEntityId: ids.legalEntity,
+    dateOfJoining: '2026-01-05',
+    nationalIdType: 'PAN',
+    nationalId: 'ABCDE1234F',
+  });
+  ids.employee = emp.id;
+  ids.contact = (
+    await post(`/employees/${emp.id}/emergency-contacts`, {
+      name: 'A contact',
+      relationship: 'Sister',
+      phone: '+91 91234 56789',
+    })
+  ).id;
+  await post(`/employees/${emp.id}/bank-accounts`, {
+    accountHolder: 'A holder',
+    accountNumber: '123456789012',
+    currency: 'INR',
+    effectiveFrom: '2026-01-01',
+  });
+  ids.document = (
+    await post(`/employees/${emp.id}/documents/upload-url`, {
+      category: 'OTHER',
+      fileName: 'a.pdf',
+      mimeType: 'application/pdf',
+      sizeBytes: 10,
+    })
+  ).documentId;
+  const up = (await A.call('post', '/employees/imports/upload-url').expect(200)).body;
+  await fetch(up.uploadUrl, {
+    method: 'PUT',
+    headers: up.headers,
+    body: `employeeCode,firstName,dateOfJoining\nA-IMP-${Date.now()},A imported,2026-01-05\n`,
+  });
+  ids.importJob = (
+    await A.call('post', '/employees/imports').send({ uploadId: up.uploadId }).expect(202)
+  ).body.id;
   ids.bRole = (await B.call('get', '/tenants/roles').expect(200)).body.data.find(
     (r) => r.systemKey === 'employee',
   ).id;
@@ -94,6 +132,46 @@ function fixtureFor(method, path) {
     [/^\/tenants\/members\/:id(\/(suspend|reactivate|sign-out))?$/, { id: ids.member }, undefined],
     [/^\/tenants\/roles\/:id$/, { id: ids.role }, { name: 'Pwned' }],
     [/^\/auth\/sessions\/:id$/, { id: ids.session }, undefined],
+    [/^\/tenants\/members\/:id\/employee$/, { id: ids.member }, { employeeId: null }],
+    [/^\/employees\/imports\/:id(\/result-url)?$/, { id: ids.importJob }, undefined],
+    [/^\/employees\/:id$/, { id: ids.employee }, { phone: '+91 90000 00000' }],
+    [/^\/employees\/:id\/national-id$/, { id: ids.employee }, undefined],
+    [
+      /^\/employees\/:id\/employment-records$/,
+      { id: ids.employee },
+      { effectiveFrom: '2026-01-05', changeReason: 'TRANSFER', departmentId: null },
+    ],
+    [
+      /^\/employees\/:id\/status$/,
+      { id: ids.employee },
+      { status: 'NOTICE', effectiveDate: '2026-11-25', reason: 'Pwned' },
+    ],
+    [
+      /^\/employees\/:id\/emergency-contacts$/,
+      { id: ids.employee },
+      { name: 'Pwned', relationship: 'X', phone: '+91 90000 00000' },
+    ],
+    [
+      /^\/employees\/:id\/emergency-contacts\/:childId$/,
+      { id: ids.employee, childId: ids.contact },
+      undefined,
+    ],
+    [
+      /^\/employees\/:id\/bank-accounts$/,
+      { id: ids.employee },
+      { accountHolder: 'Pwned', accountNumber: '999988887777', currency: 'INR', effectiveFrom: '2026-06-01' },
+    ],
+    [/^\/employees\/:id\/documents$/, { id: ids.employee }, undefined],
+    [
+      /^\/employees\/:id\/documents\/upload-url$/,
+      { id: ids.employee },
+      { category: 'OTHER', fileName: 'p.pdf', mimeType: 'application/pdf', sizeBytes: 10 },
+    ],
+    [
+      /^\/employees\/:id\/documents\/:childId(\/(complete|download-url|verify))?$/,
+      { id: ids.employee, childId: ids.document },
+      undefined,
+    ],
   ];
   const hit = table.find(([re]) => re.test(path));
   if (!hit) return null;
@@ -126,6 +204,8 @@ test('every id route answers 404 to another tenant (generated from the route reg
 
 test("tenant B's lists never contain tenant A's records", async () => {
   const lists = [
+    '/employees?limit=200&includeExited=true',
+    '/employees/imports',
     '/companies/legal-entities',
     '/companies/branches',
     '/companies/departments',
@@ -192,4 +272,18 @@ test("tenant A's data is unchanged after all of that", async () => {
   expect((await A.call('get', '/auth/sessions').expect(200)).body.data.map((s) => s.id)).toContain(
     ids.session,
   );
+  expect((await A.call('get', `/employees/${ids.employee}`).expect(200)).body).toMatchObject({
+    firstName: 'A person',
+    status: 'ACTIVE',
+    phone: null,
+  });
+  expect(
+    (await A.call('get', `/employees/${ids.employee}/emergency-contacts`).expect(200)).body.data,
+  ).toHaveLength(1);
+  expect(
+    (await A.call('get', `/employees/${ids.employee}/bank-accounts`).expect(200)).body.data,
+  ).toHaveLength(1);
+  expect(
+    (await A.call('get', `/employees/${ids.employee}/documents`).expect(200)).body.data.map((d) => d.id),
+  ).toEqual([ids.document]);
 });

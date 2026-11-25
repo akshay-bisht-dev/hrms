@@ -6,22 +6,27 @@
   "exports": {
     "./app": "./src/app.js",
     "./lib/*": "./src/lib/*",
-    "./config/*": "./src/config/*"
+    "./config/*": "./src/config/*",
+    "./modules/*": "./src/modules/*",
+    "./services.js": "./src/services.js"
   },
   "scripts": {
     "dev": "node --env-file-if-exists=../../.env --watch src/server.js",
     "start": "node src/server.js",
     "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --testPathIgnorePatterns=integration",
-    "test:integration": "node --env-file-if-exists=../../.env --experimental-vm-modules ../../node_modules/jest/bin/jest.js --testPathPatterns=integration --runInBand",
+    "test:integration": "node --env-file-if-exists=../../.env --experimental-vm-modules ../../node_modules/jest/bin/jest.js --testPathPatterns=integration --runInBand --testTimeout=30000",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "node --env-file-if-exists=../../.env prisma/seed.mjs",
     "db:check": "node --env-file-if-exists=../../.env prisma/checks/db-smoke.mjs",
-    "keys:dev": "node scripts/keys-dev.mjs"
+    "keys:dev": "node scripts/keys-dev.mjs",
+    "storage:init": "node --env-file-if-exists=../../.env scripts/storage-init.mjs"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^9.1.0",
+    "@aws-sdk/client-s3": "^3.1177.0",
+    "@aws-sdk/s3-request-presigner": "^3.1177.0",
     "@hrms/shared": "0.1.0",
     "@prisma/adapter-mariadb": "7.10.1",
     "@prisma/client": "7.10.1",
@@ -29,8 +34,11 @@
     "bullmq": "^6.7.10",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
+    "csv-parse": "^7.0.3",
+    "csv-stringify": "^6.9.0",
     "express": "^5.3.0",
     "express-rate-limit": "^8.7.5",
+    "file-type": "^22.3.0",
     "helmet": "^8.3.0",
     "ioredis": "^6.1.0",
     "jose": "^6.2.18",

@@ -24,7 +24,7 @@ export function mergeGrants(grants) {
 }
 
 /**
- * @typedef {{ membershipId: string, status: string, roles: string[], permissions: Record<string, string>,
+ * @typedef {{ membershipId: string, status: string, employeeId: string | null, roles: string[], permissions: Record<string, string>,
  *             holdsSensitive: boolean, mfaEnrolled: boolean }} Access
  */
 
@@ -52,6 +52,7 @@ export async function loadAccess({ db, redis, tenantId, userId }) {
   const access = {
     membershipId: membership.id,
     status: membership.status,
+    employeeId: membership.employeeId ?? null,
     roles: membership.membershipRoles.map((mr) => mr.role.name),
     permissions,
     holdsSensitive: Object.keys(permissions).some(isSensitivePermission),
