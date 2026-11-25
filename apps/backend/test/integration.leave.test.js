@@ -91,7 +91,10 @@ describe('setup', () => {
       'SICK',
       'UNPAID',
     ]);
+    // This month's entitlement is queued straight away rather than waiting for the schedule.
+    expect(h.jobs.workSessions.filter((j) => j.name === 'leave-accrual-tenant')).toHaveLength(1);
     expect((await owner.call('post', '/leaves/starter-pack').expect(201)).body.created).toEqual([]);
+    expect(h.jobs.workSessions.filter((j) => j.name === 'leave-accrual-tenant')).toHaveLength(1); // nothing new, nothing queued
     types = Object.fromEntries(
       (await worker.call('get', '/leaves/types').expect(200)).body.data.map((t) => [t.code, t]),
     );

@@ -697,7 +697,12 @@ function Balances({ canAdjust }) {
               key={e.id}
               size="sm"
               variant={employee?.id === e.id ? 'primary' : 'secondary'}
-              onClick={() => setEmployee(e)}
+              onClick={() => {
+                setEmployee(e);
+                // Always show fresh numbers for the person picked (leave may have been approved since).
+                qc.invalidateQueries({ queryKey: ['leave', 'balances', e.id] });
+                qc.invalidateQueries({ queryKey: ['leave', 'ledger', e.id] });
+              }}
             >
               {fullName(e)}
             </Button>

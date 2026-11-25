@@ -288,6 +288,14 @@ export function createLeaveService({ attendance, queues, now = () => new Date() 
       await attendance.recomputeDay(emp, d);
   }
 
+  /** New or newly assigned policies credit this month's entitlement right away instead of waiting for the schedule. */
+  async function accrueSoon() {
+    await queues?.workSessions?.add('leave-accrual-tenant', {
+      tenantId: ctx().tenantId,
+      month: now().toISOString().slice(0, 7),
+    });
+  }
+
   const service = {
     policyFor,
 
@@ -844,6 +852,7 @@ export function createLeaveService({ attendance, queues, now = () => new Date() 
         entityId: policy.id,
         changes: input,
       });
+      await accrueSoon();
       return { id };
     },
 
@@ -905,6 +914,7 @@ export function createLeaveService({ attendance, queues, now = () => new Date() 
         entityId: ctx().tenantId,
         changes: { created },
       });
+      if (created.length) await accrueSoon();
       return { created };
     },
 
