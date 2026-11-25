@@ -1,6 +1,6 @@
 # Sprint 4 — Employee management
 
-Status: **Complete, awaiting owner approval** · Date: 2026-11-25 · Branch: `sprint-04/employees`
+Status: **Approved** · Date: 2026-11-25 · Branch: `sprint-04/employees`
 
 ## 1. Objectives
 Give every company a reliable record of its people: profiles, job history, reporting lines, documents, bank details and emergency contacts. Everyone sees exactly what their role and position allow, and large teams can be brought in by CSV.
@@ -109,7 +109,7 @@ README (bucket setup, database URL troubleshooting), `.env.example` (storage set
 **Known limits**
 - The org chart still shows departments and teams only, not people.
 - Export is capped at 50,000 rows per file.
-- **Push to GitHub is still blocked** (see below), so CI hasn't run.
+- The first CI run on GitHub found the web image build missing the shared package; fixed in `frontend.Dockerfile` before merge.
 
 ## 12. Approval
-Pending.
+Approved by the owner on 2026-11-25; merged to `main` through a pull request after CI passed.

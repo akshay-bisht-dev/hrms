@@ -9,7 +9,8 @@ COPY apps/worker/package.json apps/worker/
 COPY apps/frontend/package.json apps/frontend/
 RUN --mount=type=secret,id=extra_ca,required=false \
     if [ -f /run/secrets/extra_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/extra_ca; fi; \
-    npm ci --workspace apps/frontend --include-workspace-root=false --ignore-scripts
+    npm ci --workspace packages/shared --workspace apps/frontend --include-workspace-root=false --ignore-scripts
+COPY packages/shared packages/shared
 COPY apps/frontend apps/frontend
 RUN npm run build -w apps/frontend
 
