@@ -9,6 +9,7 @@ import {
   HolidayCalendarBody,
   LegalEntityBody,
   TeamBody,
+  WorkLocationBody,
   WorkScheduleBody,
   WorkSchedulePatch,
   partial,
@@ -158,6 +159,17 @@ export function companyRouter({ access }) {
     updateSchema: WorkSchedulePatch,
     writeAccess: manageOrg,
     searchFields: ['name'],
+  });
+  crudRoutes(r, {
+    ...common,
+    path: '/work-locations',
+    model: 'workLocation',
+    entityType: 'WorkLocation',
+    createSchema: WorkLocationBody,
+    updateSchema: partial(WorkLocationBody),
+    writeAccess: manageOrg,
+    searchFields: ['name'],
+    orderBy: { name: 'asc' },
   });
   crudRoutes(r, {
     ...common,

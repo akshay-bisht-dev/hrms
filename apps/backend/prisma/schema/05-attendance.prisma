@@ -45,6 +45,8 @@ model OvertimeRule {
   weeklyThresholdMin Int?         @map("weekly_threshold_min")
   multiplier         Decimal      @db.Decimal(9, 6)
   requiresApproval   Boolean      @default(true) @map("requires_approval")
+  /// Every minute worked on a weekend or holiday counts as overtime.
+  restDayAllOvertime Boolean      @default(true) @map("rest_day_all_overtime")
   effectiveFrom      DateTime     @map("effective_from") @db.Date
   effectiveTo        DateTime?    @map("effective_to") @db.Date
   legalEntity        LegalEntity? @relation(fields: [tenantId, legalEntityId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
@@ -58,6 +60,8 @@ model AttendancePunch {
   employeeId     String        @map("employee_id") @db.Char(36)
   type           PunchType
   serverTs       DateTime      @map("server_ts") @db.DateTime(3)
+  /// The attendance day this punch belongs to (an OUT inherits the date of its IN, so night shifts stay on one day).
+  workDate       DateTime      @map("work_date") @db.Date
   clientTs       DateTime?     @map("client_ts") @db.DateTime(3)
   source         PunchSource
   workLocationId String?       @map("work_location_id") @db.Char(36)
@@ -69,6 +73,7 @@ model AttendancePunch {
   workLocation   WorkLocation? @relation(fields: [tenantId, workLocationId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
 
   @@index([tenantId, employeeId, serverTs])
+  @@index([tenantId, employeeId, workDate])
   @@map("attendance_punches")
 }
 
@@ -99,6 +104,12 @@ model AttendanceDay {
   lateMinutes               Int                        @default(0) @map("late_minutes")
   earlyLeaveMinutes         Int                        @default(0) @map("early_leave_minutes")
   overtimeMinutes           Int                        @default(0) @map("overtime_minutes")
+  expectedMinutes           Int?                       @map("expected_minutes")
+  overtimeStatus            OvertimeStatus             @default(NONE) @map("overtime_status")
+  overtimeDecidedBy         String?                    @map("overtime_decided_by") @db.Char(36)
+  overtimeDecidedAt         DateTime?                  @map("overtime_decided_at") @db.DateTime(3)
+  /// LATE, EARLY_LEAVE, MISSING_OUT, OVERTIME, WORKED_ON_REST_DAY, CORRECTED
+  flags                     Json?
   workLocationId            String?                    @map("work_location_id") @db.Char(36)
   isLocked                  Boolean                    @default(false) @map("is_locked")
   computedAt                DateTime                   @map("computed_at") @db.DateTime(3)
@@ -109,6 +120,35 @@ model AttendanceDay {
   @@unique([tenantId, employeeId, workDate])
   @@index([tenantId, workDate, status])
   @@map("attendance_days")
+}
+
+enum OvertimeStatus {
+  NONE
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// Attendance thresholds and capture settings. One row per legal entity, plus an optional company default (scopeKey "default").
+model AttendancePolicy {
+  id                       String       @id @db.Char(36)
+  tenantId                 String       @map("tenant_id") @db.Char(36)
+  tenant                   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  legalEntityId            String?      @map("legal_entity_id") @db.Char(36)
+  scopeKey                 String       @map("scope_key") @db.VarChar(36)
+  presentPercent           Int          @default(75) @map("present_percent")
+  halfDayPercent           Int          @default(50) @map("half_day_percent")
+  autoDeductBreak          Boolean      @default(true) @map("auto_deduct_break")
+  captureIp                Boolean      @default(false) @map("capture_ip")
+  captureGeo               Boolean      @default(false) @map("capture_geo")
+  regularizationWindowDays Int          @default(30) @map("regularization_window_days")
+  createdAt                DateTime     @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt                DateTime     @updatedAt @map("updated_at") @db.DateTime(3)
+  legalEntity              LegalEntity? @relation(fields: [tenantId, legalEntityId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, scopeKey])
+  @@map("attendance_policies")
 }
 
 enum AttendanceStatus {

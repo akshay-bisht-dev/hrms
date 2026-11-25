@@ -34,6 +34,7 @@ model Tenant {
   dataSubjectRequests   DataSubjectRequest[]
   shifts                Shift[]
   overtimeRules         OvertimeRule[]
+  attendancePolicies    AttendancePolicy[]
   leaveTypes            LeaveType[]
   salaryComponents      SalaryComponent[]
   jobRequisitions       JobRequisition[]

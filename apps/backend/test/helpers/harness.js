@@ -28,7 +28,7 @@ export async function startHarness() {
   initDb(DATABASE_URL);
   const redis = new Redis(REDIS_TEST_URL);
   await redis.flushdb();
-  const jobs = { files: [], imports: [] };
+  const jobs = { files: [], imports: [], workSessions: [] };
   // Fakes that record jobs and enforce BullMQ's rule that custom job ids may not contain ':'.
   const fakeQueue = (record) => ({
     add: async (name, data, opts = {}) => {
@@ -41,6 +41,7 @@ export async function startHarness() {
     notifications: fakeQueue((_name, data) => emails.push(data)),
     files: fakeQueue((name, data) => jobs.files.push({ name, data })),
     imports: fakeQueue((name, data) => jobs.imports.push({ name, data })),
+    workSessions: fakeQueue((name, data) => jobs.workSessions.push({ name, data })),
   };
   const services = buildServices({
     env,
