@@ -1,0 +1,141 @@
+// ── Attendance & shifts ──
+
+model Shift {
+  id               String            @id @db.Char(36)
+  tenantId         String            @map("tenant_id") @db.Char(36)
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name             String            @db.VarChar(100)
+  startMin         Int               @map("start_min")
+  endMin           Int               @map("end_min")
+  crossesMidnight  Boolean           @default(false) @map("crosses_midnight")
+  breakMinutes     Int               @default(0) @map("break_minutes")
+  graceLateMin     Int               @default(0) @map("grace_late_min")
+  graceEarlyMin    Int               @default(0) @map("grace_early_min")
+  createdAt        DateTime          @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.DateTime(3)
+  shiftAssignments ShiftAssignment[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, name])
+  @@map("shifts")
+}
+
+model ShiftAssignment {
+  id            String    @id @db.Char(36)
+  tenantId      String    @map("tenant_id") @db.Char(36)
+  shiftId       String    @map("shift_id") @db.Char(36)
+  employeeId    String    @map("employee_id") @db.Char(36)
+  effectiveFrom DateTime  @map("effective_from") @db.Date
+  effectiveTo   DateTime? @map("effective_to") @db.Date
+  createdAt     DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  shift         Shift     @relation(fields: [tenantId, shiftId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  employee      Employee  @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId, employeeId, effectiveFrom])
+  @@map("shift_assignments")
+}
+
+model OvertimeRule {
+  id                 String       @id @db.Char(36)
+  tenantId           String       @map("tenant_id") @db.Char(36)
+  tenant             Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  legalEntityId      String?      @map("legal_entity_id") @db.Char(36)
+  name               String       @db.VarChar(100)
+  dailyThresholdMin  Int?         @map("daily_threshold_min")
+  weeklyThresholdMin Int?         @map("weekly_threshold_min")
+  multiplier         Decimal      @db.Decimal(9, 6)
+  requiresApproval   Boolean      @default(true) @map("requires_approval")
+  effectiveFrom      DateTime     @map("effective_from") @db.Date
+  effectiveTo        DateTime?    @map("effective_to") @db.Date
+  legalEntity        LegalEntity? @relation(fields: [tenantId, legalEntityId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@map("overtime_rules")
+}
+
+model AttendancePunch {
+  id             String        @id @db.Char(36)
+  tenantId       String        @map("tenant_id") @db.Char(36)
+  employeeId     String        @map("employee_id") @db.Char(36)
+  type           PunchType
+  serverTs       DateTime      @map("server_ts") @db.DateTime(3)
+  clientTs       DateTime?     @map("client_ts") @db.DateTime(3)
+  source         PunchSource
+  workLocationId String?       @map("work_location_id") @db.Char(36)
+  workSessionId  String?       @map("work_session_id") @db.Char(36)
+  ipAddress      String?       @map("ip_address") @db.VarChar(45)
+  geo            Json?
+  createdAt      DateTime      @default(now()) @map("created_at") @db.DateTime(3)
+  employee       Employee      @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  workLocation   WorkLocation? @relation(fields: [tenantId, workLocationId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId, employeeId, serverTs])
+  @@map("attendance_punches")
+}
+
+enum PunchType {
+  IN
+  OUT
+}
+
+enum PunchSource {
+  WEB
+  MOBILE
+  DESKTOP_AGENT
+  BIOMETRIC
+  IMPORT
+  CORRECTION
+}
+
+model AttendanceDay {
+  id                        String                     @id @db.Char(36)
+  tenantId                  String                     @map("tenant_id") @db.Char(36)
+  employeeId                String                     @map("employee_id") @db.Char(36)
+  workDate                  DateTime                   @map("work_date") @db.Date
+  status                    AttendanceStatus           @default(PENDING)
+  firstInAt                 DateTime?                  @map("first_in_at") @db.DateTime(3)
+  lastOutAt                 DateTime?                  @map("last_out_at") @db.DateTime(3)
+  workedMinutes             Int                        @default(0) @map("worked_minutes")
+  breakMinutes              Int                        @default(0) @map("break_minutes")
+  lateMinutes               Int                        @default(0) @map("late_minutes")
+  earlyLeaveMinutes         Int                        @default(0) @map("early_leave_minutes")
+  overtimeMinutes           Int                        @default(0) @map("overtime_minutes")
+  workLocationId            String?                    @map("work_location_id") @db.Char(36)
+  isLocked                  Boolean                    @default(false) @map("is_locked")
+  computedAt                DateTime                   @map("computed_at") @db.DateTime(3)
+  employee                  Employee                   @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  attendanceRegularizations AttendanceRegularization[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, employeeId, workDate])
+  @@index([tenantId, workDate, status])
+  @@map("attendance_days")
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  HALF_DAY
+  ON_LEAVE
+  HOLIDAY
+  WEEKEND
+  WFH
+  PENDING
+}
+
+model AttendanceRegularization {
+  id              String        @id @db.Char(36)
+  tenantId        String        @map("tenant_id") @db.Char(36)
+  employeeId      String        @map("employee_id") @db.Char(36)
+  attendanceDayId String        @map("attendance_day_id") @db.Char(36)
+  requestedIn     DateTime?     @map("requested_in") @db.DateTime(3)
+  requestedOut    DateTime?     @map("requested_out") @db.DateTime(3)
+  reason          String        @db.Text
+  status          RequestStatus @default(PENDING)
+  createdAt       DateTime      @default(now()) @map("created_at") @db.DateTime(3)
+  decidedAt       DateTime?     @map("decided_at") @db.DateTime(3)
+  employee        Employee      @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  attendanceDay   AttendanceDay @relation(fields: [tenantId, attendanceDayId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId, employeeId, status])
+  @@map("attendance_regularizations")
+}

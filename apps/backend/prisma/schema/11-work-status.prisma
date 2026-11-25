@@ -1,0 +1,904 @@
+// ── Work Status, WFH, sessions, monitoring, tasks & timesheets ──
+
+model WorkLocation {
+  id                String            @id @db.Char(36)
+  tenantId          String            @map("tenant_id") @db.Char(36)
+  tenant            Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name              String            @db.VarChar(100)
+  type              WorkLocationType
+  branchId          String?           @map("branch_id") @db.Char(36)
+  requiresApproval  Boolean           @default(false) @map("requires_approval")
+  isActive          Boolean           @default(true) @map("is_active")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.DateTime(3)
+  branch            Branch?           @relation(fields: [tenantId, branchId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  attendancePunches AttendancePunch[]
+  wfhRequests       WfhRequest[]
+  workSessions      WorkSession[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, name])
+  @@map("work_locations")
+}
+
+enum WorkLocationType {
+  OFFICE
+  WFH
+  HYBRID
+  REMOTE
+  CLIENT_SITE
+  TRAVEL
+  CUSTOM
+}
+
+// Versioned: a change creates a new row; sessions pin policyId + version.
+model WorkPolicy {
+  id                  String           @id @db.Char(36)
+  tenantId            String           @map("tenant_id") @db.Char(36)
+  tenant              Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name                String           @db.VarChar(120)
+  version             Int              @default(1)
+  appliesTo           AssignmentTarget @map("applies_to")
+  targetId            String?          @map("target_id") @db.Char(36)
+  priority            Int              @default(0)
+  wfhAllowed          Boolean          @default(true) @map("wfh_allowed")
+  wfhRequiresApproval Boolean          @default(true) @map("wfh_requires_approval")
+  wfhMaxDaysPerMonth  Int?             @map("wfh_max_days_per_month")
+  allowedStartMin     Int              @default(0) @map("allowed_start_min")
+  allowedEndMin       Int              @default(1440) @map("allowed_end_min")
+  heartbeatTimeoutSec Int              @default(180) @map("heartbeat_timeout_sec")
+  idleThresholdSec    Int              @default(300) @map("idle_threshold_sec")
+  idleCounting        IdleCounting     @default(COUNTED_UNTIL_THRESHOLD) @map("idle_counting")
+  maxBreakMinutes     Int?             @map("max_break_minutes")
+  resumeWindowMin     Int              @default(120) @map("resume_window_min")
+  timesheetRequired   Boolean          @default(false) @map("timesheet_required")
+  dailyReportRequired Boolean          @default(false) @map("daily_report_required")
+  effectiveFrom       DateTime         @map("effective_from") @db.Date
+  effectiveTo         DateTime?        @map("effective_to") @db.Date
+  createdBy           String           @map("created_by") @db.Char(36)
+  createdAt           DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+  workSessions        WorkSession[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, name, version])
+  @@index([tenantId, appliesTo, targetId, effectiveFrom])
+  @@map("work_policies")
+}
+
+enum IdleCounting {
+  NOT_COUNTED
+  COUNTED
+  COUNTED_UNTIL_THRESHOLD
+}
+
+model WfhRequest {
+  id             String        @id @db.Char(36)
+  tenantId       String        @map("tenant_id") @db.Char(36)
+  employeeId     String        @map("employee_id") @db.Char(36)
+  workLocationId String        @map("work_location_id") @db.Char(36)
+  fromDate       DateTime      @map("from_date") @db.Date
+  toDate         DateTime      @map("to_date") @db.Date
+  recurrence     Json?
+  reason         String?       @db.Text
+  status         RequestStatus @default(PENDING)
+  createdAt      DateTime      @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.DateTime(3)
+  employee       Employee      @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  workLocation   WorkLocation  @relation(fields: [tenantId, workLocationId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  workSessions   WorkSession[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, employeeId, fromDate])
+  @@index([tenantId, status])
+  @@map("wfh_requests")
+}
+
+// Derived totals are recomputed from work_session_events; events are the source of truth.
+model WorkSession {
+  id                      String                   @id @db.Char(36)
+  tenantId                String                   @map("tenant_id") @db.Char(36)
+  employeeId              String                   @map("employee_id") @db.Char(36)
+  workDate                DateTime                 @map("work_date") @db.Date
+  workLocationId          String                   @map("work_location_id") @db.Char(36)
+  policyId                String                   @map("policy_id") @db.Char(36)
+  policyVersion           Int                      @map("policy_version")
+  wfhRequestId            String?                  @map("wfh_request_id") @db.Char(36)
+  startedAt               DateTime                 @map("started_at") @db.DateTime(3)
+  endedAt                 DateTime?                @map("ended_at") @db.DateTime(3)
+  status                  WorkSessionStatus        @default(ACTIVE)
+  workedSec               Int                      @default(0) @map("worked_sec")
+  breakSec                Int                      @default(0) @map("break_sec")
+  idleSec                 Int                      @default(0) @map("idle_sec")
+  disconnectedSec         Int                      @default(0) @map("disconnected_sec")
+  lastHeartbeatAt         DateTime?                @map("last_heartbeat_at") @db.DateTime(3)
+  needsReview             Boolean                  @default(false) @map("needs_review")
+  closeReason             String?                  @map("close_reason") @db.VarChar(40)
+  createdAt               DateTime                 @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt               DateTime                 @updatedAt @map("updated_at") @db.DateTime(3)
+  employee                Employee                 @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  workLocation            WorkLocation             @relation(fields: [tenantId, workLocationId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  policy                  WorkPolicy               @relation(fields: [tenantId, policyId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  wfhRequest              WfhRequest?              @relation(fields: [tenantId, wfhRequestId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  employeeActiveSession   EmployeeActiveSession?
+  workSessionEvents       WorkSessionEvent[]
+  workBreaks              WorkBreak[]
+  idleRecords             IdleRecord[]
+  workActivitySummary     WorkActivitySummary?
+  workCorrections         WorkCorrection[]
+  screenshotRecords       ScreenshotRecord[]
+  screenshotSkips         ScreenshotSkip[]
+  applicationUsageRecords ApplicationUsageRecord[]
+  taskTimeEntries         TaskTimeEntry[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, employeeId, workDate])
+  @@index([tenantId, status, workDate])
+  @@map("work_sessions")
+}
+
+enum WorkSessionStatus {
+  ACTIVE
+  ON_BREAK
+  DISCONNECTED
+  ENDED
+  AUTO_CLOSED
+}
+
+// One row per employee with an open session; row-locked (SELECT ... FOR UPDATE) on start/end.
+model EmployeeActiveSession {
+  tenantId   String      @map("tenant_id") @db.Char(36)
+  employeeId String      @map("employee_id") @db.Char(36)
+  sessionId  String      @map("session_id") @db.Char(36)
+  startedAt  DateTime    @map("started_at") @db.DateTime(3)
+  employee   Employee    @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+  session    WorkSession @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@id([tenantId, employeeId])
+  @@unique([tenantId, sessionId])
+  @@map("employee_active_sessions")
+}
+
+// Append-only (trigger). FKs kept until volume requires monthly partitioning.
+model WorkSessionEvent {
+  id             String        @id @db.Char(36)
+  tenantId       String        @map("tenant_id") @db.Char(36)
+  sessionId      String        @map("session_id") @db.Char(36)
+  type           WorkEventType
+  serverTs       DateTime      @map("server_ts") @db.DateTime(3)
+  clientTs       DateTime?     @map("client_ts") @db.DateTime(3)
+  source         EventSource
+  deviceId       String?       @map("device_id") @db.Char(36)
+  idempotencyKey String?       @map("idempotency_key") @db.VarChar(80)
+  meta           Json?
+  session        WorkSession   @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([tenantId, sessionId, idempotencyKey])
+  @@index([tenantId, sessionId, serverTs])
+  @@map("work_session_events")
+}
+
+enum WorkEventType {
+  START
+  HEARTBEAT
+  BREAK_START
+  BREAK_END
+  IDLE_START
+  IDLE_END
+  DISCONNECTED
+  RECONNECTED
+  DEVICE_ATTACHED
+  DEVICE_DETACHED
+  MONITORING_PAUSED
+  MONITORING_RESUMED
+  END
+  AUTO_CLOSED
+  CORRECTION_APPLIED
+}
+
+enum EventSource {
+  WEB
+  DESKTOP_AGENT
+  SYSTEM
+  ADMIN
+}
+
+model WorkBreak {
+  id          String      @id @db.Char(36)
+  tenantId    String      @map("tenant_id") @db.Char(36)
+  sessionId   String      @map("session_id") @db.Char(36)
+  type        BreakType   @default(REGULAR)
+  startedAt   DateTime    @map("started_at") @db.DateTime(3)
+  endedAt     DateTime?   @map("ended_at") @db.DateTime(3)
+  durationSec Int?        @map("duration_sec")
+  session     WorkSession @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@index([tenantId, sessionId])
+  @@map("work_breaks")
+}
+
+enum BreakType {
+  REGULAR
+  MEAL
+  PERSONAL
+}
+
+model IdleRecord {
+  id          String         @id @db.Char(36)
+  tenantId    String         @map("tenant_id") @db.Char(36)
+  sessionId   String         @map("session_id") @db.Char(36)
+  idleStart   DateTime       @map("idle_start") @db.DateTime(3)
+  idleEnd     DateTime?      @map("idle_end") @db.DateTime(3)
+  durationSec Int?           @map("duration_sec")
+  resolution  IdleResolution @default(UNREVIEWED)
+  note        String?        @db.VarChar(255)
+  session     WorkSession    @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@index([tenantId, sessionId])
+  @@map("idle_records")
+}
+
+enum IdleResolution {
+  UNREVIEWED
+  NOT_COUNTED
+  COUNTED_BY_POLICY
+  CORRECTED
+}
+
+model WorkActivitySummary {
+  id         String      @id @db.Char(36)
+  tenantId   String      @map("tenant_id") @db.Char(36)
+  sessionId  String      @map("session_id") @db.Char(36)
+  employeeId String      @map("employee_id") @db.Char(36)
+  workDate   DateTime    @map("work_date") @db.Date
+  activeSec  Int         @map("active_sec")
+  idleSec    Int         @map("idle_sec")
+  byCategory Json        @map("by_category")
+  computedAt DateTime    @map("computed_at") @db.DateTime(3)
+  session    WorkSession @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+  employee   Employee    @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([tenantId, sessionId])
+  @@index([tenantId, employeeId, workDate])
+  @@map("work_activity_summaries")
+}
+
+model WorkCorrection {
+  id         String         @id @db.Char(36)
+  tenantId   String         @map("tenant_id") @db.Char(36)
+  sessionId  String         @map("session_id") @db.Char(36)
+  employeeId String         @map("employee_id") @db.Char(36)
+  kind       CorrectionKind
+  fromTs     DateTime       @map("from_ts") @db.DateTime(3)
+  toTs       DateTime       @map("to_ts") @db.DateTime(3)
+  reason     String         @db.Text
+  status     RequestStatus  @default(PENDING)
+  decidedBy  String?        @map("decided_by") @db.Char(36)
+  decidedAt  DateTime?      @map("decided_at") @db.DateTime(3)
+  createdAt  DateTime       @default(now()) @map("created_at") @db.DateTime(3)
+  session    WorkSession    @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  employee   Employee       @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([tenantId, id])
+  @@index([tenantId, employeeId, status])
+  @@map("work_corrections")
+}
+
+enum CorrectionKind {
+  ADD_WORK_TIME
+  REMOVE_WORK_TIME
+  MARK_BREAK
+  MISSING_CHECKOUT
+  IDLE_DISPUTE
+  DISCONNECT_DISPUTE
+}
+
+// ── Monitoring governance ──
+
+model MonitoringActivation {
+  id                         String                      @id @db.Char(36)
+  tenantId                   String                      @map("tenant_id") @db.Char(36)
+  tenant                     Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  version                    Int
+  status                     ActivationStatus            @default(DRAFT)
+  purpose                    String                      @db.Text
+  scope                      Json
+  jurisdictionSteps          Json                        @map("jurisdiction_steps")
+  lawfulBasis                Json                        @map("lawful_basis")
+  dpiaKey                    String?                     @map("dpia_key") @db.VarChar(500)
+  noticeText                 String                      @map("notice_text") @db.Text
+  noticeLocales              Json                        @map("notice_locales")
+  noticeStartsOn             DateTime                    @map("notice_starts_on") @db.Date
+  viewerRoleIds              Json                        @map("viewer_role_ids")
+  retentionDays              Int                         @map("retention_days")
+  contacts                   Json
+  reviewDueOn                DateTime                    @map("review_due_on") @db.Date
+  completedBy                String?                     @map("completed_by") @db.Char(36)
+  completedAt                DateTime?                   @map("completed_at") @db.DateTime(3)
+  createdAt                  DateTime                    @default(now()) @map("created_at") @db.DateTime(3)
+  screenshotPolicies         ScreenshotPolicy[]
+  monitoringAcknowledgements MonitoringAcknowledgement[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, version])
+  @@map("monitoring_activations")
+}
+
+enum ActivationStatus {
+  DRAFT
+  ACTIVE
+  SUPERSEDED
+  PAUSED
+}
+
+model ScreenshotPolicy {
+  id                      String               @id @db.Char(36)
+  tenantId                String               @map("tenant_id") @db.Char(36)
+  activationId            String               @map("activation_id") @db.Char(36)
+  name                    String               @db.VarChar(120)
+  version                 Int                  @default(1)
+  appliesTo               AssignmentTarget     @map("applies_to")
+  targetId                String?              @map("target_id") @db.Char(36)
+  enabled                 Boolean              @default(false)
+  intervalMin             Int                  @default(10) @map("interval_min")
+  jitterPct               Int                  @default(20) @map("jitter_pct")
+  captureMode             CaptureMode          @default(FULL_SCREEN) @map("capture_mode")
+  retentionDays           Int                  @default(30) @map("retention_days")
+  excludedApps            Json                 @map("excluded_apps")
+  blurZones               Json?                @map("blur_zones")
+  employeeCanDelete       Boolean              @default(false) @map("employee_can_delete")
+  activityTrackingEnabled Boolean              @default(false) @map("activity_tracking_enabled")
+  effectiveFrom           DateTime             @map("effective_from") @db.Date
+  effectiveTo             DateTime?            @map("effective_to") @db.Date
+  createdBy               String               @map("created_by") @db.Char(36)
+  createdAt               DateTime             @default(now()) @map("created_at") @db.DateTime(3)
+  activation              MonitoringActivation @relation(fields: [tenantId, activationId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  screenshotRecords       ScreenshotRecord[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, name, version])
+  @@map("screenshot_policies")
+}
+
+enum CaptureMode {
+  FULL_SCREEN
+  ACTIVE_WINDOW
+  BLURRED
+}
+
+model MonitoringAcknowledgement {
+  id                String               @id @db.Char(36)
+  tenantId          String               @map("tenant_id") @db.Char(36)
+  employeeId        String               @map("employee_id") @db.Char(36)
+  activationId      String               @map("activation_id") @db.Char(36)
+  activationVersion Int                  @map("activation_version")
+  locale            String               @db.VarChar(16)
+  channel           AckChannel
+  acknowledgedAt    DateTime             @map("acknowledged_at") @db.DateTime(3)
+  ipAddress         String?              @map("ip_address") @db.VarChar(45)
+  employee          Employee             @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  activation        MonitoringActivation @relation(fields: [tenantId, activationId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([tenantId, employeeId, activationId])
+  @@map("monitoring_acknowledgements")
+}
+
+enum AckChannel {
+  WEB
+  DESKTOP_AGENT
+}
+
+// ── Desktop devices ──
+
+model MonitoredDevice {
+  id                String             @id @db.Char(36)
+  tenantId          String             @map("tenant_id") @db.Char(36)
+  employeeId        String             @map("employee_id") @db.Char(36)
+  ownership         DeviceOwnership    @default(COMPANY_MANAGED)
+  os                DeviceOs
+  osVersion         String             @map("os_version") @db.VarChar(40)
+  agentVersion      String             @map("agent_version") @db.VarChar(20)
+  fingerprintHash   String             @map("fingerprint_hash") @db.Char(64)
+  hostnameHash      String?            @map("hostname_hash") @db.Char(64)
+  status            DeviceStatus       @default(PENDING)
+  approvedBy        String?            @map("approved_by") @db.Char(36)
+  lastSeenAt        DateTime?          @map("last_seen_at") @db.DateTime(3)
+  lastIp            String?            @map("last_ip") @db.VarChar(45)
+  revokedAt         DateTime?          @map("revoked_at") @db.DateTime(3)
+  revokedReason     String?            @map("revoked_reason") @db.VarChar(120)
+  createdAt         DateTime           @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt         DateTime           @updatedAt @map("updated_at") @db.DateTime(3)
+  employee          Employee           @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  deviceSessions    DeviceSession[]
+  screenshotRecords ScreenshotRecord[]
+  screenshotSkips   ScreenshotSkip[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, fingerprintHash])
+  @@index([tenantId, employeeId])
+  @@map("monitored_devices")
+}
+
+enum DeviceOwnership {
+  COMPANY_MANAGED
+  BYOD
+}
+
+enum DeviceOs {
+  WINDOWS
+  MACOS
+  LINUX
+}
+
+enum DeviceStatus {
+  PENDING
+  ACTIVE
+  REVOKED
+}
+
+model DevicePairingCode {
+  id         String    @id @db.Char(36)
+  tenantId   String    @map("tenant_id") @db.Char(36)
+  employeeId String    @map("employee_id") @db.Char(36)
+  codeHash   String    @map("code_hash") @db.Char(64)
+  attempts   Int       @default(0)
+  expiresAt  DateTime  @map("expires_at") @db.DateTime(3)
+  usedAt     DateTime? @map("used_at") @db.DateTime(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  employee   Employee  @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@index([codeHash])
+  @@map("device_pairing_codes")
+}
+
+model DeviceSession {
+  id          String          @id @db.Char(36)
+  tenantId    String          @map("tenant_id") @db.Char(36)
+  deviceId    String          @map("device_id") @db.Char(36)
+  refreshHash String          @unique @map("refresh_hash") @db.Char(64)
+  familyId    String          @map("family_id") @db.Char(36)
+  expiresAt   DateTime        @map("expires_at") @db.DateTime(3)
+  rotatedAt   DateTime?       @map("rotated_at") @db.DateTime(3)
+  revokedAt   DateTime?       @map("revoked_at") @db.DateTime(3)
+  createdAt   DateTime        @default(now()) @map("created_at") @db.DateTime(3)
+  device      MonitoredDevice @relation(fields: [tenantId, deviceId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@index([tenantId, deviceId])
+  @@index([familyId])
+  @@map("device_sessions")
+}
+
+// ── Screenshots ──
+
+model ScreenshotRecord {
+  id                   String                @id @db.Char(36)
+  tenantId             String                @map("tenant_id") @db.Char(36)
+  employeeId           String                @map("employee_id") @db.Char(36)
+  sessionId            String                @map("session_id") @db.Char(36)
+  deviceId             String                @map("device_id") @db.Char(36)
+  policyId             String                @map("policy_id") @db.Char(36)
+  policyVersion        Int                   @map("policy_version")
+  status               ScreenshotStatus      @default(SLOT_ISSUED)
+  capturedAtServer     DateTime              @map("captured_at_server") @db.DateTime(3)
+  capturedAtClient     DateTime?             @map("captured_at_client") @db.DateTime(3)
+  s3Key                String?               @map("s3_key") @db.VarChar(500)
+  thumbKey             String?               @map("thumb_key") @db.VarChar(500)
+  sha256               String?               @db.Char(64)
+  bytes                Int?
+  width                Int?
+  height               Int?
+  foregroundCategoryId String?               @map("foreground_category_id") @db.Char(36)
+  retentionUntil       DateTime              @map("retention_until") @db.DateTime(3)
+  deletedAt            DateTime?             @map("deleted_at") @db.DateTime(3)
+  deleteReason         String?               @map("delete_reason") @db.VarChar(60)
+  createdAt            DateTime              @default(now()) @map("created_at") @db.DateTime(3)
+  employee             Employee              @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  session              WorkSession           @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  device               MonitoredDevice       @relation(fields: [tenantId, deviceId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  policy               ScreenshotPolicy      @relation(fields: [tenantId, policyId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  foregroundCategory   ApplicationCategory?  @relation(fields: [tenantId, foregroundCategoryId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  screenshotAccessLogs ScreenshotAccessLog[]
+  screenshotDisputes   ScreenshotDispute[]
+  privacyIncidents     PrivacyIncident[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, employeeId, capturedAtServer])
+  @@index([tenantId, sessionId])
+  @@index([tenantId, status, retentionUntil])
+  @@map("screenshot_records")
+}
+
+enum ScreenshotStatus {
+  SLOT_ISSUED
+  UPLOADED
+  PROCESSING
+  AVAILABLE
+  INVALID
+  UNDER_DISPUTE
+  DELETED
+}
+
+model ScreenshotSkip {
+  id         String          @id @db.Char(36)
+  tenantId   String          @map("tenant_id") @db.Char(36)
+  sessionId  String          @map("session_id") @db.Char(36)
+  deviceId   String          @map("device_id") @db.Char(36)
+  reason     SkipReason
+  occurredAt DateTime        @map("occurred_at") @db.DateTime(3)
+  session    WorkSession     @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+  device     MonitoredDevice @relation(fields: [tenantId, deviceId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId, sessionId, occurredAt])
+  @@map("screenshot_skips")
+}
+
+enum SkipReason {
+  EXCLUDED_APP
+  IDLE
+  ON_BREAK
+  SCREEN_LOCKED
+  NO_PERMISSION
+  POLICY_OUTDATED
+  OFFLINE
+  OTHER
+}
+
+// Append-only (trigger).
+model ScreenshotAccessLog {
+  id           String           @id @db.Char(36)
+  tenantId     String           @map("tenant_id") @db.Char(36)
+  screenshotId String           @map("screenshot_id") @db.Char(36)
+  actorUserId  String           @map("actor_user_id") @db.Char(36)
+  action       ScreenshotAction
+  reason       String?          @db.VarChar(255)
+  ipAddress    String?          @map("ip_address") @db.VarChar(45)
+  userAgent    String?          @map("user_agent") @db.VarChar(255)
+  at           DateTime         @default(now()) @db.DateTime(3)
+  screenshot   ScreenshotRecord @relation(fields: [tenantId, screenshotId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId, screenshotId, at])
+  @@index([tenantId, actorUserId, at])
+  @@map("screenshot_access_logs")
+}
+
+enum ScreenshotAction {
+  LIST
+  VIEW
+  DOWNLOAD
+  EXPORT
+  DELETE
+  DISPUTE
+  RESTORE
+}
+
+model ScreenshotDispute {
+  id                 String           @id @db.Char(36)
+  tenantId           String           @map("tenant_id") @db.Char(36)
+  screenshotId       String           @map("screenshot_id") @db.Char(36)
+  employeeId         String           @map("employee_id") @db.Char(36)
+  reason             String           @db.Text
+  status             DisputeStatus    @default(OPEN)
+  reviewerEmployeeId String?          @map("reviewer_employee_id") @db.Char(36)
+  resolution         String?          @db.Text
+  resolvedAt         DateTime?        @map("resolved_at") @db.DateTime(3)
+  createdAt          DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+  screenshot         ScreenshotRecord @relation(fields: [tenantId, screenshotId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  employee           Employee         @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId, status])
+  @@map("screenshot_disputes")
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESTORED
+  DELETED
+  TIME_CORRECTED
+}
+
+model PrivacyIncident {
+  id                 String            @id @db.Char(36)
+  tenantId           String            @map("tenant_id") @db.Char(36)
+  reporterEmployeeId String            @map("reporter_employee_id") @db.Char(36)
+  screenshotId       String?           @map("screenshot_id") @db.Char(36)
+  description        String            @db.Text
+  status             IncidentStatus    @default(OPEN)
+  handledBy          String?           @map("handled_by") @db.Char(36)
+  resolution         String?           @db.Text
+  createdAt          DateTime          @default(now()) @map("created_at") @db.DateTime(3)
+  resolvedAt         DateTime?         @map("resolved_at") @db.DateTime(3)
+  reporter           Employee          @relation(fields: [tenantId, reporterEmployeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  screenshot         ScreenshotRecord? @relation(fields: [tenantId, screenshotId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId, status])
+  @@map("privacy_incidents")
+}
+
+enum IncidentStatus {
+  OPEN
+  INVESTIGATING
+  RESOLVED
+}
+
+// ── Application activity (aggregated metadata only) ──
+
+model ApplicationCategory {
+  id                   String                @id @db.Char(36)
+  tenantId             String                @map("tenant_id") @db.Char(36)
+  tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name                 String                @db.VarChar(100)
+  isWork               Boolean               @default(true) @map("is_work")
+  color                String?               @db.VarChar(9)
+  screenshotRecords    ScreenshotRecord[]
+  approvedApplications ApprovedApplication[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, name])
+  @@map("application_categories")
+}
+
+model ApprovedApplication {
+  id                      String                   @id @db.Char(36)
+  tenantId                String                   @map("tenant_id") @db.Char(36)
+  categoryId              String                   @map("category_id") @db.Char(36)
+  name                    String                   @db.VarChar(120)
+  kind                    AppKind
+  platformIdentifiers     Json                     @map("platform_identifiers")
+  isExcluded              Boolean                  @default(false) @map("is_excluded")
+  createdAt               DateTime                 @default(now()) @map("created_at") @db.DateTime(3)
+  category                ApplicationCategory      @relation(fields: [tenantId, categoryId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  applicationUsageRecords ApplicationUsageRecord[]
+
+  @@unique([tenantId, id])
+  @@map("approved_applications")
+}
+
+enum AppKind {
+  DESKTOP_APP
+  WEB_DOMAIN
+}
+
+model ApplicationUsageRecord {
+  id            String              @id @db.Char(36)
+  tenantId      String              @map("tenant_id") @db.Char(36)
+  sessionId     String              @map("session_id") @db.Char(36)
+  approvedAppId String              @map("approved_app_id") @db.Char(36)
+  bucketStart   DateTime            @map("bucket_start") @db.DateTime(3)
+  activeSec     Int                 @map("active_sec")
+  session       WorkSession         @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+  approvedApp   ApprovedApplication @relation(fields: [tenantId, approvedAppId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([tenantId, sessionId, approvedAppId, bucketStart])
+  @@map("application_usage_records")
+}
+
+// ── Projects, tasks, time ──
+
+model Project {
+  id              String          @id @db.Char(36)
+  tenantId        String          @map("tenant_id") @db.Char(36)
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  code            String          @db.VarChar(20)
+  name            String          @db.VarChar(150)
+  description     String?         @db.Text
+  clientName      String?         @map("client_name") @db.VarChar(150)
+  status          ProjectStatus   @default(ACTIVE)
+  isBillable      Boolean         @default(false) @map("is_billable")
+  ownerEmployeeId String?         @map("owner_employee_id") @db.Char(36)
+  startDate       DateTime?       @map("start_date") @db.Date
+  endDate         DateTime?       @map("end_date") @db.Date
+  createdAt       DateTime        @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt       DateTime        @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt       DateTime?       @map("deleted_at") @db.DateTime(3)
+  projectMembers  ProjectMember[]
+  tasks           Task[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, code])
+  @@map("projects")
+}
+
+enum ProjectStatus {
+  PLANNED
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+}
+
+model ProjectMember {
+  tenantId   String   @map("tenant_id") @db.Char(36)
+  projectId  String   @map("project_id") @db.Char(36)
+  employeeId String   @map("employee_id") @db.Char(36)
+  role       String   @default("MEMBER") @db.VarChar(40)
+  project    Project  @relation(fields: [tenantId, projectId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+  employee   Employee @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@id([projectId, employeeId])
+  @@index([tenantId, employeeId])
+  @@map("project_members")
+}
+
+model Task {
+  id                  String           @id @db.Char(36)
+  tenantId            String           @map("tenant_id") @db.Char(36)
+  projectId           String?          @map("project_id") @db.Char(36)
+  parentTaskId        String?          @map("parent_task_id") @db.Char(36)
+  title               String           @db.VarChar(250)
+  description         String?          @db.Text
+  priority            TaskPriority     @default(MEDIUM)
+  status              TaskStatus       @default(ASSIGNED)
+  dueDate             DateTime?        @map("due_date") @db.Date
+  estimateMin         Int?             @map("estimate_min")
+  actualMin           Int              @default(0) @map("actual_min")
+  progressPct         Int              @default(0) @map("progress_pct")
+  requiresApproval    Boolean          @default(false) @map("requires_approval")
+  createdByEmployeeId String?          @map("created_by_employee_id") @db.Char(36)
+  approvedBy          String?          @map("approved_by") @db.Char(36)
+  approvedAt          DateTime?        @map("approved_at") @db.DateTime(3)
+  completedAt         DateTime?        @map("completed_at") @db.DateTime(3)
+  createdAt           DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt           DateTime         @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt           DateTime?        @map("deleted_at") @db.DateTime(3)
+  project             Project?         @relation(fields: [tenantId, projectId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  parent              Task?            @relation("Subtasks", fields: [tenantId, parentTaskId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  subtasks            Task[]           @relation("Subtasks")
+  taskAssignments     TaskAssignment[]
+  taskComments        TaskComment[]
+  taskAttachments     TaskAttachment[]
+  taskTimeEntries     TaskTimeEntry[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, projectId, status])
+  @@index([tenantId, status, dueDate])
+  @@map("tasks")
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  ASSIGNED
+  IN_PROGRESS
+  ON_HOLD
+  UNDER_REVIEW
+  COMPLETED
+  CANCELLED
+}
+
+model TaskAssignment {
+  id           String    @id @db.Char(36)
+  tenantId     String    @map("tenant_id") @db.Char(36)
+  taskId       String    @map("task_id") @db.Char(36)
+  employeeId   String    @map("employee_id") @db.Char(36)
+  assignedBy   String?   @map("assigned_by") @db.Char(36)
+  assignedAt   DateTime  @default(now()) @map("assigned_at") @db.DateTime(3)
+  unassignedAt DateTime? @map("unassigned_at") @db.DateTime(3)
+  task         Task      @relation(fields: [tenantId, taskId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+  employee     Employee  @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([tenantId, taskId, employeeId])
+  @@index([tenantId, employeeId])
+  @@map("task_assignments")
+}
+
+model TaskComment {
+  id               String    @id @db.Char(36)
+  tenantId         String    @map("tenant_id") @db.Char(36)
+  taskId           String    @map("task_id") @db.Char(36)
+  authorEmployeeId String    @map("author_employee_id") @db.Char(36)
+  body             String    @db.Text
+  createdAt        DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  editedAt         DateTime? @map("edited_at") @db.DateTime(3)
+  deletedAt        DateTime? @map("deleted_at") @db.DateTime(3)
+  task             Task      @relation(fields: [tenantId, taskId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+  author           Employee  @relation(fields: [tenantId, authorEmployeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId, taskId])
+  @@map("task_comments")
+}
+
+model TaskAttachment {
+  id                   String         @id @db.Char(36)
+  tenantId             String         @map("tenant_id") @db.Char(36)
+  taskId               String         @map("task_id") @db.Char(36)
+  uploadedByEmployeeId String         @map("uploaded_by_employee_id") @db.Char(36)
+  fileName             String         @map("file_name") @db.VarChar(255)
+  s3Key                String         @map("s3_key") @db.VarChar(500)
+  mimeType             String         @map("mime_type") @db.VarChar(100)
+  sizeBytes            Int            @map("size_bytes")
+  scanStatus           FileScanStatus @default(PENDING) @map("scan_status")
+  createdAt            DateTime       @default(now()) @map("created_at") @db.DateTime(3)
+  task                 Task           @relation(fields: [tenantId, taskId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+  uploadedBy           Employee       @relation(fields: [tenantId, uploadedByEmployeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId, taskId])
+  @@map("task_attachments")
+}
+
+model TaskTimeEntry {
+  id          String          @id @db.Char(36)
+  tenantId    String          @map("tenant_id") @db.Char(36)
+  taskId      String          @map("task_id") @db.Char(36)
+  employeeId  String          @map("employee_id") @db.Char(36)
+  sessionId   String?         @map("session_id") @db.Char(36)
+  startedAt   DateTime        @map("started_at") @db.DateTime(3)
+  endedAt     DateTime?       @map("ended_at") @db.DateTime(3)
+  durationSec Int?            @map("duration_sec")
+  source      TimeEntrySource @default(TIMER)
+  note        String?         @db.VarChar(255)
+  createdAt   DateTime        @default(now()) @map("created_at") @db.DateTime(3)
+  task        Task            @relation(fields: [tenantId, taskId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  employee    Employee        @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  session     WorkSession?    @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId, employeeId, startedAt])
+  @@index([tenantId, taskId])
+  @@map("task_time_entries")
+}
+
+enum TimeEntrySource {
+  TIMER
+  MANUAL
+  CORRECTION
+}
+
+model DailyWorkReport {
+  id              String             @id @db.Char(36)
+  tenantId        String             @map("tenant_id") @db.Char(36)
+  employeeId      String             @map("employee_id") @db.Char(36)
+  workDate        DateTime           @map("work_date") @db.Date
+  timesheetId     String?            @map("timesheet_id") @db.Char(36)
+  summarySnapshot Json               @map("summary_snapshot")
+  notes           String?            @db.Text
+  status          ReportStatus       @default(DRAFT)
+  submittedAt     DateTime?          @map("submitted_at") @db.DateTime(3)
+  reviewedBy      String?            @map("reviewed_by") @db.Char(36)
+  reviewedAt      DateTime?          @map("reviewed_at") @db.DateTime(3)
+  reviewComment   String?            @map("review_comment") @db.Text
+  createdAt       DateTime           @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt       DateTime           @updatedAt @map("updated_at") @db.DateTime(3)
+  employee        Employee           @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  timesheet       TimesheetApproval? @relation(fields: [tenantId, timesheetId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, employeeId, workDate])
+  @@index([tenantId, status, workDate])
+  @@map("daily_work_reports")
+}
+
+enum ReportStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  CHANGES_REQUESTED
+}
+
+model TimesheetApproval {
+  id                 String            @id @db.Char(36)
+  tenantId           String            @map("tenant_id") @db.Char(36)
+  employeeId         String            @map("employee_id") @db.Char(36)
+  weekStart          DateTime          @map("week_start") @db.Date
+  totalSec           Int               @map("total_sec")
+  breakdown          Json
+  status             ReportStatus      @default(DRAFT)
+  submittedAt        DateTime?         @map("submitted_at") @db.DateTime(3)
+  approverEmployeeId String?           @map("approver_employee_id") @db.Char(36)
+  decidedAt          DateTime?         @map("decided_at") @db.DateTime(3)
+  comment            String?           @db.Text
+  createdAt          DateTime          @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt          DateTime          @updatedAt @map("updated_at") @db.DateTime(3)
+  employee           Employee          @relation("TimesheetOwner", fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  approver           Employee?         @relation("TimesheetApprover", fields: [tenantId, approverEmployeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  dailyWorkReports   DailyWorkReport[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, employeeId, weekStart])
+  @@index([tenantId, approverEmployeeId, status])
+  @@map("timesheet_approvals")
+}

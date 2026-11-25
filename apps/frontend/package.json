@@ -1,0 +1,83 @@
+{
+  "name": "@hrms/frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js"
+  },
+  "dependencies": {
+    "@radix-ui/react-slot": "^1.5.0",
+    "@tanstack/react-query": "^5.108.4",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "i18next": "^27.2.9",
+    "lucide-react": "^1.80.0",
+    "qrcode": "^1.5.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-i18next": "^18.0.3",
+    "react-router": "^8.5.3",
+    "tailwind-merge": "^3.7.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.13",
+    "@babel/preset-env": "^7.29.14",
+    "@babel/preset-react": "^7.29.7",
+    "@tailwindcss/vite": "^4.3.5",
+    "@testing-library/jest-dom": "^6.10.0",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.13",
+    "@vitejs/plugin-react": "^6.3.0",
+    "babel-jest": "^30.5.2",
+    "identity-obj-proxy": "^3.0.0",
+    "jest-environment-jsdom": "^30.5.2",
+    "tailwindcss": "^4.3.5",
+    "vite": "^8.3.8"
+  },
+  "jest": {
+    "testEnvironment": "<rootDir>/test/jsdom-environment.cjs",
+    "transform": {
+      "\\.jsx?$": [
+        "babel-jest",
+        {
+          "configFile": false,
+          "babelrc": false,
+          "presets": [
+            [
+              "@babel/preset-env",
+              {
+                "targets": {
+                  "node": "current"
+                },
+                "modules": false
+              }
+            ],
+            [
+              "@babel/preset-react",
+              {
+                "runtime": "automatic"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    "moduleNameMapper": {
+      "\\.(css)$": "identity-obj-proxy",
+      "^@/(.*)$": "<rootDir>/src/$1"
+    },
+    "setupFilesAfterEnv": [
+      "<rootDir>/test/setup.js"
+    ],
+    "testMatch": [
+      "**/test/**/*.test.{js,jsx}"
+    ],
+    "extensionsToTreatAsEsm": [
+      ".jsx"
+    ]
+  }
+}

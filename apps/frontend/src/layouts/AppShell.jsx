@@ -1,0 +1,129 @@
+import { Link, NavLink, Outlet } from 'react-router';
+import { useTranslation } from 'react-i18next';
+import { Activity, Building2, KeyRound, LogOut, Network, Shield, Users } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiFetch } from '@/services/api';
+import { useAuth } from '@/context/AuthContext';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/utils/cn';
+
+/** Sidebar + content layout. The sidebar stacks above the content on narrow screens (no fixed widths). */
+export function AppShell() {
+  const { t } = useTranslation();
+  const { me, signOut, signedIn, can } = useAuth();
+  const qc = useQueryClient();
+  const memberships = useQuery({
+    queryKey: ['auth', 'memberships'],
+    queryFn: () => apiFetch('/api/v1/auth/memberships'),
+  });
+  const switchTo = async (tenantId) => {
+    const res = await apiFetch('/api/v1/auth/switch-tenant', { method: 'POST', json: { tenantId } });
+    qc.clear();
+    await signedIn(res.accessToken);
+  };
+  const link = ({ isActive }) =>
+    cn(
+      'flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-2.5 text-sm',
+      isActive ? 'bg-primary-soft font-semibold text-primary-hover' : 'text-slate-700 hover:bg-bg',
+    );
+  const needsMfa = me?.mfa.requiredForRole && !me?.mfa.enabled;
+  return (
+    <div className="flex min-h-screen flex-wrap bg-bg">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:start-4 focus:top-4 focus:z-10 focus:rounded focus:bg-surface focus:px-3 focus:py-2"
+      >
+        {t('app.skipToContent')}
+      </a>
+      <nav
+        aria-label={t('nav.main')}
+        className="flex max-w-full flex-[1_1_248px] flex-col gap-1 border-e border-border bg-surface px-4 py-5 lg:max-w-[248px]"
+      >
+        <div className="flex items-center gap-2.5 px-2 pb-1">
+          <span
+            aria-hidden="true"
+            className="flex size-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-white"
+          >
+            W
+          </span>
+          <span className="text-[15px] font-semibold">{t('app.name')}</span>
+        </div>
+        {(memberships.data?.data.length ?? 0) > 1 ? (
+          <label className="px-2 pb-4 text-xs text-text-muted">
+            <span className="sr-only">{t('nav.switchCompany')}</span>
+            <select
+              value={me?.tenant.id}
+              onChange={(e) => switchTo(e.target.value)}
+              className="mt-1 h-9 w-full rounded-[var(--radius-control)] border border-border-strong bg-surface px-2 text-sm text-text"
+            >
+              {memberships.data.data.map((m) => (
+                <option key={m.tenantId} value={m.tenantId}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : (
+          <p className="px-2 pb-4 text-xs text-text-muted">{me?.tenant.name}</p>
+        )}
+        <NavLink to="/" end className={link}>
+          <Activity aria-hidden="true" className="size-4" />
+          {t('nav.systemStatus')}
+        </NavLink>
+        <span className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-text-muted">
+          {t('nav.settings')}
+        </span>
+        <NavLink to="/settings/company" className={link}>
+          <Building2 aria-hidden="true" className="size-4" />
+          {t('nav.company')}
+        </NavLink>
+        <NavLink to="/settings/organization" className={link}>
+          <Network aria-hidden="true" className="size-4" />
+          {t('nav.organization')}
+        </NavLink>
+        {can('members.invite') && (
+          <NavLink to="/settings/members" className={link}>
+            <Users aria-hidden="true" className="size-4" />
+            {t('nav.members')}
+          </NavLink>
+        )}
+        {can('members.invite') && (
+          <NavLink to="/settings/roles" className={link}>
+            <KeyRound aria-hidden="true" className="size-4" />
+            {t('nav.roles')}
+          </NavLink>
+        )}
+        <NavLink to="/settings/security" className={link}>
+          <Shield aria-hidden="true" className="size-4" />
+          {t('nav.security')}
+        </NavLink>
+        <div className="mt-auto flex flex-col gap-2 border-t border-border pt-4">
+          <div className="px-2 text-sm">
+            <div className="font-medium">{me?.user.displayName}</div>
+            <div className="truncate text-xs text-text-muted">{me?.user.email}</div>
+          </div>
+          <Button variant="ghost" size="sm" className="justify-start" onClick={signOut}>
+            <LogOut aria-hidden="true" className="size-4" />
+            {t('nav.signOut')}
+          </Button>
+        </div>
+      </nav>
+      <main id="main" className="min-w-0 flex-[999_1_560px] px-4 py-8 sm:px-6">
+        <div className="mx-auto flex max-w-5xl flex-col gap-6">
+          {needsMfa && (
+            <div
+              role="status"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-amber-200 bg-warning-soft px-4 py-3 text-sm text-amber-900"
+            >
+              <span>{t('mfaBanner.text')}</span>
+              <Button asChild size="sm" variant="secondary">
+                <Link to="/settings/security">{t('mfaBanner.action')}</Link>
+              </Button>
+            </div>
+          )}
+          <Outlet />
+        </div>
+      </main>
+    </div>
+  );
+}

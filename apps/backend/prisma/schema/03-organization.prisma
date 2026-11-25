@@ -1,0 +1,226 @@
+// ── Organization structure ──
+
+model LegalEntity {
+  id                      String                   @id @db.Char(36)
+  tenantId                String                   @map("tenant_id") @db.Char(36)
+  tenant                  Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name                    String                   @db.VarChar(200)
+  countryCode             String                   @map("country_code") @db.Char(2)
+  currency                String                   @db.Char(3)
+  registrationNumber      String?                  @map("registration_number") @db.VarChar(80)
+  taxIds                  Json?                    @map("tax_ids")
+  fiscalYearStartMonth    Int                      @default(1) @map("fiscal_year_start_month")
+  weekStartDay            Int                      @default(1) @map("week_start_day")
+  weekendDays             Json                     @map("weekend_days")
+  timezone                String                   @db.VarChar(64)
+  createdAt               DateTime                 @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt               DateTime                 @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt               DateTime?                @map("deleted_at") @db.DateTime(3)
+  country                 CountryProfile           @relation(fields: [countryCode], references: [code], onDelete: Restrict, onUpdate: Restrict)
+  branches                Branch[]
+  employees               Employee[]
+  overtimeRules           OvertimeRule[]
+  leavePolicies           LeavePolicy[]
+  salaryStructures        SalaryStructure[]
+  tenantStatutorySettings TenantStatutorySetting[]
+  payrollPeriods          PayrollPeriod[]
+
+  @@unique([tenantId, id])
+  @@map("legal_entities")
+}
+
+model Branch {
+  id                String             @id @db.Char(36)
+  tenantId          String             @map("tenant_id") @db.Char(36)
+  legalEntityId     String             @map("legal_entity_id") @db.Char(36)
+  holidayCalendarId String?            @map("holiday_calendar_id") @db.Char(36)
+  name              String             @db.VarChar(150)
+  code              String             @db.VarChar(20)
+  address           Json?
+  timezone          String             @db.VarChar(64)
+  createdAt         DateTime           @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt         DateTime           @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt         DateTime?          @map("deleted_at") @db.DateTime(3)
+  legalEntity       LegalEntity        @relation(fields: [tenantId, legalEntityId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  holidayCalendar   HolidayCalendar?   @relation(fields: [tenantId, holidayCalendarId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  employees         Employee[]
+  employmentRecords EmploymentRecord[]
+  workLocations     WorkLocation[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, code])
+  @@map("branches")
+}
+
+model Department {
+  id                String             @id @db.Char(36)
+  tenantId          String             @map("tenant_id") @db.Char(36)
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  parentId          String?            @map("parent_id") @db.Char(36)
+  name              String             @db.VarChar(150)
+  code              String             @db.VarChar(20)
+  headEmployeeId    String?            @map("head_employee_id") @db.Char(36)
+  createdAt         DateTime           @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt         DateTime           @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt         DateTime?          @map("deleted_at") @db.DateTime(3)
+  parent            Department?        @relation("DepartmentTree", fields: [tenantId, parentId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  children          Department[]       @relation("DepartmentTree")
+  teams             Team[]
+  employees         Employee[]
+  employmentRecords EmploymentRecord[]
+  jobRequisitions   JobRequisition[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, code])
+  @@map("departments")
+}
+
+model Designation {
+  id                String             @id @db.Char(36)
+  tenantId          String             @map("tenant_id") @db.Char(36)
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  title             String             @db.VarChar(150)
+  level             Int?
+  createdAt         DateTime           @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt         DateTime           @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt         DateTime?          @map("deleted_at") @db.DateTime(3)
+  employees         Employee[]
+  employmentRecords EmploymentRecord[]
+  jobRequisitions   JobRequisition[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, title])
+  @@map("designations")
+}
+
+model Team {
+  id             String       @id @db.Char(36)
+  tenantId       String       @map("tenant_id") @db.Char(36)
+  departmentId   String?      @map("department_id") @db.Char(36)
+  name           String       @db.VarChar(150)
+  leadEmployeeId String?      @map("lead_employee_id") @db.Char(36)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt      DateTime?    @map("deleted_at") @db.DateTime(3)
+  department     Department?  @relation(fields: [tenantId, departmentId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  teamMembers    TeamMember[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, name])
+  @@map("teams")
+}
+
+model TeamMember {
+  tenantId   String   @map("tenant_id") @db.Char(36)
+  teamId     String   @map("team_id") @db.Char(36)
+  employeeId String   @map("employee_id") @db.Char(36)
+  joinedAt   DateTime @map("joined_at") @db.Date
+  team       Team     @relation(fields: [tenantId, teamId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+  employee   Employee @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@id([teamId, employeeId])
+  @@index([tenantId, employeeId])
+  @@map("team_members")
+}
+
+model WorkSchedule {
+  id                String             @id @db.Char(36)
+  tenantId          String             @map("tenant_id") @db.Char(36)
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name              String             @db.VarChar(120)
+  type              ScheduleType
+  weeklyPattern     Json               @map("weekly_pattern")
+  dailyMinutes      Int                @map("daily_minutes")
+  graceMinutes      Int                @default(0) @map("grace_minutes")
+  createdAt         DateTime           @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt         DateTime           @updatedAt @map("updated_at") @db.DateTime(3)
+  employmentRecords EmploymentRecord[]
+
+  @@unique([tenantId, id])
+  @@map("work_schedules")
+}
+
+enum ScheduleType {
+  FIXED
+  FLEXIBLE
+  SHIFT
+}
+
+model HolidayCalendar {
+  id          String    @id @db.Char(36)
+  tenantId    String    @map("tenant_id") @db.Char(36)
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name        String    @db.VarChar(120)
+  countryCode String    @map("country_code") @db.Char(2)
+  regionCode  String    @default("") @map("region_code") @db.VarChar(10)
+  year        Int
+  createdAt   DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.DateTime(3)
+  branches    Branch[]
+  holidays    Holiday[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, name, year])
+  @@map("holiday_calendars")
+}
+
+model Holiday {
+  id         String          @id @db.Char(36)
+  tenantId   String          @map("tenant_id") @db.Char(36)
+  calendarId String          @map("calendar_id") @db.Char(36)
+  date       DateTime        @db.Date
+  name       String          @db.VarChar(150)
+  isOptional Boolean         @default(false) @map("is_optional")
+  calendar   HolidayCalendar @relation(fields: [tenantId, calendarId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@unique([tenantId, calendarId, date, name])
+  @@map("holidays")
+}
+
+model CompanyPolicy {
+  id                     String                  @id @db.Char(36)
+  tenantId               String                  @map("tenant_id") @db.Char(36)
+  tenant                 Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  title                  String                  @db.VarChar(200)
+  category               String                  @db.VarChar(60)
+  version                Int                     @default(1)
+  documentKey            String?                 @map("document_key") @db.VarChar(500)
+  body                   String?                 @db.Text
+  requiresAck            Boolean                 @default(false) @map("requires_ack")
+  publishedAt            DateTime?               @map("published_at") @db.DateTime(3)
+  createdAt              DateTime                @default(now()) @map("created_at") @db.DateTime(3)
+  policyAcknowledgements PolicyAcknowledgement[]
+
+  @@unique([tenantId, id])
+  @@map("company_policies")
+}
+
+model PolicyAcknowledgement {
+  id             String        @id @db.Char(36)
+  tenantId       String        @map("tenant_id") @db.Char(36)
+  policyId       String        @map("policy_id") @db.Char(36)
+  employeeId     String        @map("employee_id") @db.Char(36)
+  acknowledgedAt DateTime      @map("acknowledged_at") @db.DateTime(3)
+  ipAddress      String?       @map("ip_address") @db.VarChar(45)
+  policy         CompanyPolicy @relation(fields: [tenantId, policyId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  employee       Employee      @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([tenantId, policyId, employeeId])
+  @@map("policy_acknowledgements")
+}
+
+model Announcement {
+  id          String    @id @db.Char(36)
+  tenantId    String    @map("tenant_id") @db.Char(36)
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  title       String    @db.VarChar(200)
+  body        String    @db.Text
+  audience    Json
+  publishedAt DateTime? @map("published_at") @db.DateTime(3)
+  expiresAt   DateTime? @map("expires_at") @db.DateTime(3)
+  createdBy   String    @map("created_by") @db.Char(36)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+
+  @@index([tenantId, publishedAt])
+  @@map("announcements")
+}

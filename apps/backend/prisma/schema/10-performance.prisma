@@ -1,0 +1,163 @@
+// ── Performance ──
+
+model PerformanceCycle {
+  id                 String              @id @db.Char(36)
+  tenantId           String              @map("tenant_id") @db.Char(36)
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name               String              @db.VarChar(120)
+  startDate          DateTime            @map("start_date") @db.Date
+  endDate            DateTime            @map("end_date") @db.Date
+  status             CycleStatus         @default(DRAFT)
+  settings           Json
+  createdAt          DateTime            @default(now()) @map("created_at") @db.DateTime(3)
+  goals              Goal[]
+  performanceReviews PerformanceReview[]
+
+  @@unique([tenantId, id])
+  @@map("performance_cycles")
+}
+
+enum CycleStatus {
+  DRAFT
+  GOAL_SETTING
+  SELF_REVIEW
+  MANAGER_REVIEW
+  CALIBRATION
+  CLOSED
+}
+
+model Goal {
+  id           String            @id @db.Char(36)
+  tenantId     String            @map("tenant_id") @db.Char(36)
+  cycleId      String?           @map("cycle_id") @db.Char(36)
+  employeeId   String            @map("employee_id") @db.Char(36)
+  parentGoalId String?           @map("parent_goal_id") @db.Char(36)
+  title        String            @db.VarChar(250)
+  description  String?           @db.Text
+  type         GoalType
+  weight       Decimal?          @db.Decimal(5, 2)
+  targetValue  Decimal?          @map("target_value") @db.Decimal(19, 4)
+  currentValue Decimal?          @map("current_value") @db.Decimal(19, 4)
+  unit         String?           @db.VarChar(20)
+  status       GoalStatus        @default(DRAFT)
+  dueDate      DateTime?         @map("due_date") @db.Date
+  createdAt    DateTime          @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt    DateTime          @updatedAt @map("updated_at") @db.DateTime(3)
+  cycle        PerformanceCycle? @relation(fields: [tenantId, cycleId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  employee     Employee          @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  parent       Goal?             @relation("GoalTree", fields: [tenantId, parentGoalId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  children     Goal[]            @relation("GoalTree")
+
+  @@unique([tenantId, id])
+  @@index([tenantId, employeeId, cycleId])
+  @@map("goals")
+}
+
+enum GoalType {
+  OKR_OBJECTIVE
+  KEY_RESULT
+  KPI
+  PERSONAL
+}
+
+enum GoalStatus {
+  DRAFT
+  ACTIVE
+  AT_RISK
+  ACHIEVED
+  MISSED
+  CANCELLED
+}
+
+model PerformanceReview {
+  id                 String            @id @db.Char(36)
+  tenantId           String            @map("tenant_id") @db.Char(36)
+  cycleId            String            @map("cycle_id") @db.Char(36)
+  employeeId         String            @map("employee_id") @db.Char(36)
+  reviewerEmployeeId String?           @map("reviewer_employee_id") @db.Char(36)
+  status             ReviewStatus      @default(NOT_STARTED)
+  selfRating         Decimal?          @map("self_rating") @db.Decimal(4, 2)
+  managerRating      Decimal?          @map("manager_rating") @db.Decimal(4, 2)
+  finalRating        Decimal?          @map("final_rating") @db.Decimal(4, 2)
+  summary            String?           @db.Text
+  submittedAt        DateTime?         @map("submitted_at") @db.DateTime(3)
+  createdAt          DateTime          @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt          DateTime          @updatedAt @map("updated_at") @db.DateTime(3)
+  cycle              PerformanceCycle  @relation(fields: [tenantId, cycleId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  employee           Employee          @relation("ReviewSubject", fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  reviewer           Employee?         @relation("ReviewReviewer", fields: [tenantId, reviewerEmployeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  reviewResponses    ReviewResponse[]
+  feedbackRequests   FeedbackRequest[]
+  developmentPlans   DevelopmentPlan[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, cycleId, employeeId])
+  @@map("performance_reviews")
+}
+
+enum ReviewStatus {
+  NOT_STARTED
+  SELF_IN_PROGRESS
+  MANAGER_IN_PROGRESS
+  CALIBRATING
+  COMPLETED
+}
+
+model ReviewResponse {
+  id                   String            @id @db.Char(36)
+  tenantId             String            @map("tenant_id") @db.Char(36)
+  reviewId             String            @map("review_id") @db.Char(36)
+  respondentEmployeeId String            @map("respondent_employee_id") @db.Char(36)
+  respondentType       RespondentType    @map("respondent_type")
+  answers              Json
+  submittedAt          DateTime?         @map("submitted_at") @db.DateTime(3)
+  review               PerformanceReview @relation(fields: [tenantId, reviewId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@unique([tenantId, reviewId, respondentEmployeeId, respondentType])
+  @@map("review_responses")
+}
+
+enum RespondentType {
+  SELF
+  MANAGER
+  PEER
+  DIRECT_REPORT
+}
+
+model FeedbackRequest {
+  id                      String            @id @db.Char(36)
+  tenantId                String            @map("tenant_id") @db.Char(36)
+  reviewId                String            @map("review_id") @db.Char(36)
+  requestedFromEmployeeId String            @map("requested_from_employee_id") @db.Char(36)
+  status                  FeedbackStatus    @default(PENDING)
+  anonymous               Boolean           @default(true)
+  dueDate                 DateTime?         @map("due_date") @db.Date
+  createdAt               DateTime          @default(now()) @map("created_at") @db.DateTime(3)
+  review                  PerformanceReview @relation(fields: [tenantId, reviewId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@index([tenantId, requestedFromEmployeeId, status])
+  @@map("feedback_requests")
+}
+
+enum FeedbackStatus {
+  PENDING
+  SUBMITTED
+  DECLINED
+  EXPIRED
+}
+
+model DevelopmentPlan {
+  id         String             @id @db.Char(36)
+  tenantId   String             @map("tenant_id") @db.Char(36)
+  employeeId String             @map("employee_id") @db.Char(36)
+  reviewId   String?            @map("review_id") @db.Char(36)
+  items      Json
+  status     String             @default("ACTIVE") @db.VarChar(20)
+  createdAt  DateTime           @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt  DateTime           @updatedAt @map("updated_at") @db.DateTime(3)
+  employee   Employee           @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  review     PerformanceReview? @relation(fields: [tenantId, reviewId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId, employeeId])
+  @@map("development_plans")
+}

@@ -1,0 +1,110 @@
+# Local development stack. Infrastructure only by default:
+#   docker compose up -d                 → MySQL, Redis, S3 (SeaweedFS), Mailpit
+#   docker compose --profile app up -d   → also the API, worker and frontend containers (production-like)
+name: hrms
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: root_dev_password
+      MYSQL_DATABASE: hrms
+      MYSQL_USER: hrms
+      MYSQL_PASSWORD: hrms_dev_password
+    # log-bin-trust-function-creators lets the app user create the immutability triggers
+    # (production: the same flag in the RDS parameter group).
+    command:
+      [
+        '--character-set-server=utf8mb4',
+        '--collation-server=utf8mb4_0900_ai_ci',
+        '--default-time-zone=+00:00',
+        '--log-bin-trust-function-creators=1',
+      ]
+    ports: ['3306:3306']
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./infrastructure/docker/mysql-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', '127.0.0.1', '-uroot', '-proot_dev_password', '--silent']
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7.4-alpine
+    command: ['redis-server', '--appendonly', 'yes', '--maxmemory-policy', 'noeviction']
+    ports: ['6379:6379']
+    volumes: [redis-data:/data]
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # S3-compatible object storage for local development (stands in for AWS S3).
+  # MinIO no longer publishes free container images, so SeaweedFS (Apache-2.0) is used instead.
+  s3:
+    image: chrislusf/seaweedfs:4.55
+    command:
+      [
+        'server',
+        '-dir=/data',
+        '-s3',
+        '-s3.port=9000',
+        '-s3.config=/etc/seaweedfs/s3.json',
+        '-master.volumeSizeLimitMB=1024',
+      ]
+    ports: ['9000:9000']
+    volumes:
+      - s3-data:/data
+      - ./infrastructure/docker/seaweedfs-s3.json:/etc/seaweedfs/s3.json:ro
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports: ['1025:1025', '8025:8025']
+
+  migrate:
+    profiles: [app]
+    image: hrms-backend:dev
+    build: { context: ., dockerfile: infrastructure/docker/backend.Dockerfile }
+    command: ['sh', '-c', 'npx prisma migrate deploy && node prisma/seed.mjs']
+    environment: &app-env
+      NODE_ENV: production
+      DATABASE_URL: mysql://hrms:hrms_dev_password@mysql:3306/hrms?connectionLimit=10
+      REDIS_URL: redis://redis:6379
+      FRONTEND_URL: http://localhost:8080
+      ENABLE_API_DOCS: 'true'
+      LOG_LEVEL: info
+    depends_on:
+      mysql: { condition: service_healthy }
+
+  api:
+    profiles: [app]
+    image: hrms-backend:dev
+    build: { context: ., dockerfile: infrastructure/docker/backend.Dockerfile }
+    environment: *app-env
+    ports: ['3000:3000']
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  worker:
+    profiles: [app]
+    image: hrms-worker:dev
+    build: { context: ., dockerfile: infrastructure/docker/worker.Dockerfile }
+    environment: *app-env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  web:
+    profiles: [app]
+    image: hrms-frontend:dev
+    build: { context: ., dockerfile: infrastructure/docker/frontend.Dockerfile }
+    ports: ['8080:8080']
+    depends_on: [api]
+
+volumes:
+  mysql-data:
+  redis-data:
+  s3-data:

@@ -1,0 +1,12 @@
+// Workforce HRMS — Prisma schema (MySQL 8.4). JavaScript client only.
+// Conventions: docs/phase-4/02-database-design.md
+// Tenant-owned tables carry tenant_id, UNIQUE(tenant_id, id) and composite foreign keys.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider     = "mysql"
+  relationMode = "foreignKeys"
+}

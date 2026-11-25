@@ -1,0 +1,146 @@
+// ── Leave (ledger-based balances: balance = SUM(quantity)) ──
+
+model LeaveType {
+  id                        String             @id @db.Char(36)
+  tenantId                  String             @map("tenant_id") @db.Char(36)
+  tenant                    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  code                      String             @db.VarChar(20)
+  name                      String             @db.VarChar(100)
+  isPaid                    Boolean            @default(true) @map("is_paid")
+  unit                      LeaveUnit          @default(DAY)
+  isSystem                  Boolean            @default(false) @map("is_system")
+  allowNegative             Boolean            @default(false) @map("allow_negative")
+  requiresDocumentAfterDays Int?               @map("requires_document_after_days")
+  color                     String?            @db.VarChar(9)
+  createdAt                 DateTime           @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt                 DateTime           @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt                 DateTime?          @map("deleted_at") @db.DateTime(3)
+  leavePolicies             LeavePolicy[]
+  leaveLedgerEntries        LeaveLedgerEntry[]
+  leaveRequests             LeaveRequest[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, code])
+  @@map("leave_types")
+}
+
+enum LeaveUnit {
+  DAY
+  HOUR
+}
+
+model LeavePolicy {
+  id                     String                  @id @db.Char(36)
+  tenantId               String                  @map("tenant_id") @db.Char(36)
+  leaveTypeId            String                  @map("leave_type_id") @db.Char(36)
+  legalEntityId          String?                 @map("legal_entity_id") @db.Char(36)
+  name                   String                  @db.VarChar(120)
+  version                Int                     @default(1)
+  // accrual, carry-forward, caps, sandwich rule, eligibility, encashment — validated by Zod schema
+  rules                  Json
+  effectiveFrom          DateTime                @map("effective_from") @db.Date
+  effectiveTo            DateTime?               @map("effective_to") @db.Date
+  createdAt              DateTime                @default(now()) @map("created_at") @db.DateTime(3)
+  leaveType              LeaveType               @relation(fields: [tenantId, leaveTypeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  legalEntity            LegalEntity?            @relation(fields: [tenantId, legalEntityId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  leavePolicyAssignments LeavePolicyAssignment[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, leaveTypeId, effectiveFrom])
+  @@map("leave_policies")
+}
+
+model LeavePolicyAssignment {
+  id            String           @id @db.Char(36)
+  tenantId      String           @map("tenant_id") @db.Char(36)
+  policyId      String           @map("policy_id") @db.Char(36)
+  appliesTo     AssignmentTarget @map("applies_to")
+  targetId      String?          @map("target_id") @db.Char(36)
+  effectiveFrom DateTime         @map("effective_from") @db.Date
+  effectiveTo   DateTime?        @map("effective_to") @db.Date
+  policy        LeavePolicy      @relation(fields: [tenantId, policyId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@index([tenantId, appliesTo, targetId])
+  @@map("leave_policy_assignments")
+}
+
+enum AssignmentTarget {
+  COMPANY
+  LEGAL_ENTITY
+  BRANCH
+  DEPARTMENT
+  TEAM
+  EMPLOYEE
+}
+
+model LeaveLedgerEntry {
+  id          String         @id @db.Char(36)
+  tenantId    String         @map("tenant_id") @db.Char(36)
+  employeeId  String         @map("employee_id") @db.Char(36)
+  leaveTypeId String         @map("leave_type_id") @db.Char(36)
+  entryType   LeaveEntryType @map("entry_type")
+  quantity    Decimal        @db.Decimal(8, 2)
+  postedOn    DateTime       @map("posted_on") @db.Date
+  // Idempotency for scheduled postings (e.g. "2026-11" for a monthly accrual); NULL for ad-hoc entries
+  periodKey   String?        @map("period_key") @db.VarChar(20)
+  sourceType  String         @map("source_type") @db.VarChar(40)
+  sourceId    String?        @map("source_id") @db.Char(36)
+  note        String?        @db.VarChar(255)
+  createdBy   String?        @map("created_by") @db.Char(36)
+  createdAt   DateTime       @default(now()) @map("created_at") @db.DateTime(3)
+  employee    Employee       @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  leaveType   LeaveType      @relation(fields: [tenantId, leaveTypeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([tenantId, employeeId, leaveTypeId, entryType, periodKey])
+  @@index([tenantId, employeeId, leaveTypeId, postedOn])
+  @@map("leave_ledger_entries")
+}
+
+enum LeaveEntryType {
+  OPENING_BALANCE
+  ACCRUAL
+  ADJUSTMENT
+  CONSUMPTION
+  REVERSAL
+  CARRY_FORWARD
+  EXPIRY
+  ENCASHMENT
+}
+
+model LeaveRequest {
+  id               String            @id @db.Char(36)
+  tenantId         String            @map("tenant_id") @db.Char(36)
+  employeeId       String            @map("employee_id") @db.Char(36)
+  leaveTypeId      String            @map("leave_type_id") @db.Char(36)
+  fromDate         DateTime          @map("from_date") @db.Date
+  toDate           DateTime          @map("to_date") @db.Date
+  fromHalfDay      Boolean           @default(false) @map("from_half_day")
+  toHalfDay        Boolean           @default(false) @map("to_half_day")
+  totalQuantity    Decimal           @map("total_quantity") @db.Decimal(8, 2)
+  reason           String?           @db.Text
+  documentKey      String?           @map("document_key") @db.VarChar(500)
+  status           RequestStatus     @default(PENDING)
+  cancelledAt      DateTime?         @map("cancelled_at") @db.DateTime(3)
+  createdAt        DateTime          @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.DateTime(3)
+  employee         Employee          @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  leaveType        LeaveType         @relation(fields: [tenantId, leaveTypeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  leaveRequestDays LeaveRequestDay[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, employeeId, fromDate])
+  @@index([tenantId, status])
+  @@map("leave_requests")
+}
+
+model LeaveRequestDay {
+  tenantId  String       @map("tenant_id") @db.Char(36)
+  requestId String       @map("request_id") @db.Char(36)
+  date      DateTime     @db.Date
+  quantity  Decimal      @db.Decimal(8, 2)
+  request   LeaveRequest @relation(fields: [tenantId, requestId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@id([requestId, date])
+  @@index([tenantId, date])
+  @@map("leave_request_days")
+}

@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint, syntax, unit tests, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run check:no-ts
+      - run: npm run check:syntax
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm test
+      - run: npm run build
+      - name: Dependency audit (blocks on high/critical)
+        run: npm audit --audit-level=high
+
+  integration:
+    name: Integration tests (MySQL 8.4 + Redis 7)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root_ci_password
+          MYSQL_DATABASE: hrms_test
+          MYSQL_USER: hrms
+          MYSQL_PASSWORD: hrms_ci_password
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot_ci_password --silent"
+          --health-interval=5s --health-timeout=3s --health-retries=30
+      redis:
+        image: redis:7.4-alpine
+        ports: ['6379:6379']
+        options: --health-cmd="redis-cli ping" --health-interval=5s --health-timeout=3s --health-retries=20
+    env:
+      DATABASE_URL: mysql://hrms:hrms_ci_password@127.0.0.1:3306/hrms_test
+      REDIS_URL: redis://127.0.0.1:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Allow the app user to create triggers (service containers cannot take server flags)
+        run: mysql -h 127.0.0.1 -uroot -proot_ci_password -e "SET GLOBAL log_bin_trust_function_creators = 1;"
+      - run: npm run db:migrate
+      - name: Database invariants (tenant FKs, frozen payroll, append-only logs)
+        run: npm run db:check -w apps/backend
+      - run: npm run db:seed
+      - name: Seed is idempotent
+        run: npm run db:seed
+      - run: npm run test:integration
+
+  docker:
+    name: Docker images build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: checks
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - run: docker build -f infrastructure/docker/backend.Dockerfile -t hrms-backend:ci .
+      - run: docker build -f infrastructure/docker/worker.Dockerfile -t hrms-worker:ci .
+      - run: docker build -f infrastructure/docker/frontend.Dockerfile -t hrms-frontend:ci .

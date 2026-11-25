@@ -1,0 +1,365 @@
+// ── Payroll (country-pluggable). Finalized runs are immutable: see migrations/sql/triggers.sql ──
+
+model SalaryComponent {
+  id                        String                     @id @db.Char(36)
+  tenantId                  String                     @map("tenant_id") @db.Char(36)
+  tenant                    Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  code                      String                     @db.VarChar(40)
+  name                      String                     @db.VarChar(120)
+  kind                      ComponentKind
+  calcType                  CalcType                   @map("calc_type")
+  formula                   String?                    @db.Text
+  percentOf                 String?                    @map("percent_of") @db.VarChar(40)
+  rate                      Decimal?                   @db.Decimal(9, 6)
+  fixedAmount               Decimal?                   @map("fixed_amount") @db.Decimal(19, 4)
+  taxable                   Boolean                    @default(true)
+  roundingRule              RoundingRule               @default(HALF_UP) @map("rounding_rule")
+  statutoryKey              String?                    @map("statutory_key") @db.VarChar(60)
+  displayOrder              Int                        @default(0) @map("display_order")
+  isActive                  Boolean                    @default(true) @map("is_active")
+  createdAt                 DateTime                   @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt                 DateTime                   @updatedAt @map("updated_at") @db.DateTime(3)
+  salaryStructureComponents SalaryStructureComponent[]
+  employeeSalaryLines       EmployeeSalaryLine[]
+  payrollLines              PayrollLine[]
+  payrollInputs             PayrollInput[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, code])
+  @@map("salary_components")
+}
+
+enum ComponentKind {
+  EARNING
+  DEDUCTION
+  EMPLOYER_CONTRIBUTION
+  REIMBURSEMENT
+  INFORMATIONAL
+}
+
+enum CalcType {
+  FIXED
+  PERCENTAGE
+  FORMULA
+  STATUTORY
+  INPUT
+}
+
+enum RoundingRule {
+  HALF_UP
+  HALF_EVEN
+  UP
+  DOWN
+  NONE
+}
+
+model SalaryStructure {
+  id                        String                     @id @db.Char(36)
+  tenantId                  String                     @map("tenant_id") @db.Char(36)
+  legalEntityId             String                     @map("legal_entity_id") @db.Char(36)
+  name                      String                     @db.VarChar(120)
+  currency                  String                     @db.Char(3)
+  version                   Int                        @default(1)
+  effectiveFrom             DateTime                   @map("effective_from") @db.Date
+  effectiveTo               DateTime?                  @map("effective_to") @db.Date
+  createdAt                 DateTime                   @default(now()) @map("created_at") @db.DateTime(3)
+  legalEntity               LegalEntity                @relation(fields: [tenantId, legalEntityId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  salaryStructureComponents SalaryStructureComponent[]
+  employeeSalaries          EmployeeSalary[]
+
+  @@unique([tenantId, id])
+  @@map("salary_structures")
+}
+
+model SalaryStructureComponent {
+  tenantId        String          @map("tenant_id") @db.Char(36)
+  structureId     String          @map("structure_id") @db.Char(36)
+  componentId     String          @map("component_id") @db.Char(36)
+  sequence        Int
+  overrideFormula String?         @map("override_formula") @db.Text
+  overrideRate    Decimal?        @map("override_rate") @db.Decimal(9, 6)
+  structure       SalaryStructure @relation(fields: [tenantId, structureId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+  component       SalaryComponent @relation(fields: [tenantId, componentId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([structureId, componentId])
+  @@index([tenantId, componentId])
+  @@map("salary_structure_components")
+}
+
+model EmployeeSalary {
+  id                  String               @id @db.Char(36)
+  tenantId            String               @map("tenant_id") @db.Char(36)
+  employeeId          String               @map("employee_id") @db.Char(36)
+  structureId         String               @map("structure_id") @db.Char(36)
+  currency            String               @db.Char(3)
+  annualCtc           Decimal              @map("annual_ctc") @db.Decimal(19, 4)
+  payFrequency        PayFrequency         @default(MONTHLY) @map("pay_frequency")
+  effectiveFrom       DateTime             @map("effective_from") @db.Date
+  effectiveTo         DateTime?            @map("effective_to") @db.Date
+  reason              String               @db.VarChar(60)
+  approvedBy          String?              @map("approved_by") @db.Char(36)
+  createdAt           DateTime             @default(now()) @map("created_at") @db.DateTime(3)
+  employee            Employee             @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  structure           SalaryStructure      @relation(fields: [tenantId, structureId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  employeeSalaryLines EmployeeSalaryLine[]
+  payrollRunEmployees PayrollRunEmployee[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, employeeId, effectiveFrom])
+  @@map("employee_salaries")
+}
+
+enum PayFrequency {
+  MONTHLY
+  SEMI_MONTHLY
+  BIWEEKLY
+  WEEKLY
+}
+
+model EmployeeSalaryLine {
+  tenantId         String          @map("tenant_id") @db.Char(36)
+  employeeSalaryId String          @map("employee_salary_id") @db.Char(36)
+  componentId      String          @map("component_id") @db.Char(36)
+  amount           Decimal         @db.Decimal(19, 4)
+  period           AmountPeriod
+  employeeSalary   EmployeeSalary  @relation(fields: [tenantId, employeeSalaryId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+  component        SalaryComponent @relation(fields: [tenantId, componentId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([employeeSalaryId, componentId])
+  @@index([tenantId, componentId])
+  @@map("employee_salary_lines")
+}
+
+enum AmountPeriod {
+  ANNUAL
+  MONTHLY
+}
+
+model TenantStatutorySetting {
+  id                  String            @id @db.Char(36)
+  tenantId            String            @map("tenant_id") @db.Char(36)
+  legalEntityId       String            @map("legal_entity_id") @db.Char(36)
+  packId              String            @map("pack_id") @db.Char(36)
+  overrides           Json
+  registrationNumbers Json?             @map("registration_numbers")
+  effectiveFrom       DateTime          @map("effective_from") @db.Date
+  effectiveTo         DateTime?         @map("effective_to") @db.Date
+  createdAt           DateTime          @default(now()) @map("created_at") @db.DateTime(3)
+  legalEntity         LegalEntity       @relation(fields: [tenantId, legalEntityId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  pack                StatutoryRulePack @relation(fields: [packId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId, legalEntityId, effectiveFrom])
+  @@map("tenant_statutory_settings")
+}
+
+model PayrollPeriod {
+  id            String       @id @db.Char(36)
+  tenantId      String       @map("tenant_id") @db.Char(36)
+  legalEntityId String       @map("legal_entity_id") @db.Char(36)
+  frequency     PayFrequency
+  startDate     DateTime     @map("start_date") @db.Date
+  endDate       DateTime     @map("end_date") @db.Date
+  payDate       DateTime     @map("pay_date") @db.Date
+  status        PeriodStatus @default(OPEN)
+  legalEntity   LegalEntity  @relation(fields: [tenantId, legalEntityId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  payrollRuns   PayrollRun[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, legalEntityId, frequency, startDate])
+  @@map("payroll_periods")
+}
+
+enum PeriodStatus {
+  OPEN
+  CLOSED
+}
+
+model PayrollRun {
+  id                  String               @id @db.Char(36)
+  tenantId            String               @map("tenant_id") @db.Char(36)
+  periodId            String               @map("period_id") @db.Char(36)
+  type                PayrollRunType       @default(REGULAR)
+  status              PayrollRunStatus     @default(DRAFT)
+  currency            String               @db.Char(3)
+  engineVersion       String?              @map("engine_version") @db.VarChar(40)
+  ruleVersionsPinned  Json?                @map("rule_versions_pinned")
+  totals              Json?
+  inputsLockedAt      DateTime?            @map("inputs_locked_at") @db.DateTime(3)
+  calculatedAt        DateTime?            @map("calculated_at") @db.DateTime(3)
+  reviewedBy          String?              @map("reviewed_by") @db.Char(36)
+  reviewedAt          DateTime?            @map("reviewed_at") @db.DateTime(3)
+  approvedBy          String?              @map("approved_by") @db.Char(36)
+  approvedAt          DateTime?            @map("approved_at") @db.DateTime(3)
+  finalizedAt         DateTime?            @map("finalized_at") @db.DateTime(3)
+  paidAt              DateTime?            @map("paid_at") @db.DateTime(3)
+  finalHash           String?              @map("final_hash") @db.Char(64)
+  createdBy           String               @map("created_by") @db.Char(36)
+  createdAt           DateTime             @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt           DateTime             @updatedAt @map("updated_at") @db.DateTime(3)
+  period              PayrollPeriod        @relation(fields: [tenantId, periodId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  payrollRunEmployees PayrollRunEmployee[]
+  payrollInputs       PayrollInput[]
+  fnfSettlements      FnfSettlement[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, periodId])
+  @@index([tenantId, status])
+  @@map("payroll_runs")
+}
+
+enum PayrollRunType {
+  REGULAR
+  OFF_CYCLE
+  FNF
+  ADJUSTMENT
+}
+
+enum PayrollRunStatus {
+  DRAFT
+  INPUTS_LOCKED
+  CALCULATING
+  CALCULATED
+  REVIEWED
+  APPROVED
+  FINALIZED
+  PAID
+  CANCELLED
+}
+
+model PayrollRunEmployee {
+  id               String            @id @db.Char(36)
+  tenantId         String            @map("tenant_id") @db.Char(36)
+  runId            String            @map("run_id") @db.Char(36)
+  employeeId       String            @map("employee_id") @db.Char(36)
+  employeeSalaryId String?           @map("employee_salary_id") @db.Char(36)
+  currency         String            @db.Char(3)
+  paidDays         Decimal           @map("paid_days") @db.Decimal(8, 2)
+  lopDays          Decimal           @map("lop_days") @db.Decimal(8, 2)
+  gross            Decimal           @db.Decimal(19, 4)
+  deductions       Decimal           @db.Decimal(19, 4)
+  employerCost     Decimal           @map("employer_cost") @db.Decimal(19, 4)
+  net              Decimal           @db.Decimal(19, 4)
+  status           RunEmployeeStatus @default(OK)
+  errors           Json?
+  createdAt        DateTime          @default(now()) @map("created_at") @db.DateTime(3)
+  run              PayrollRun        @relation(fields: [tenantId, runId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  employee         Employee          @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  employeeSalary   EmployeeSalary?   @relation(fields: [tenantId, employeeSalaryId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  payrollLines     PayrollLine[]
+  payslip          Payslip?
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, runId, employeeId])
+  @@index([tenantId, employeeId])
+  @@map("payroll_run_employees")
+}
+
+enum RunEmployeeStatus {
+  OK
+  WARNING
+  ERROR
+  EXCLUDED
+}
+
+model PayrollLine {
+  id            String             @id @db.Char(36)
+  tenantId      String             @map("tenant_id") @db.Char(36)
+  runEmployeeId String             @map("run_employee_id") @db.Char(36)
+  componentId   String?            @map("component_id") @db.Char(36)
+  code          String             @db.VarChar(40)
+  label         String             @db.VarChar(120)
+  kind          ComponentKind
+  amount        Decimal            @db.Decimal(19, 4)
+  sequence      Int
+  calcTrace     Json?              @map("calc_trace")
+  runEmployee   PayrollRunEmployee @relation(fields: [tenantId, runEmployeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  component     SalaryComponent?   @relation(fields: [tenantId, componentId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId, runEmployeeId])
+  @@map("payroll_lines")
+}
+
+model PayrollInput {
+  id          String          @id @db.Char(36)
+  tenantId    String          @map("tenant_id") @db.Char(36)
+  runId       String          @map("run_id") @db.Char(36)
+  employeeId  String          @map("employee_id") @db.Char(36)
+  componentId String          @map("component_id") @db.Char(36)
+  amount      Decimal         @db.Decimal(19, 4)
+  note        String?         @db.VarChar(255)
+  sourceType  String          @map("source_type") @db.VarChar(40)
+  createdBy   String          @map("created_by") @db.Char(36)
+  createdAt   DateTime        @default(now()) @map("created_at") @db.DateTime(3)
+  run         PayrollRun      @relation(fields: [tenantId, runId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  employee    Employee        @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  component   SalaryComponent @relation(fields: [tenantId, componentId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId, runId, employeeId])
+  @@map("payroll_inputs")
+}
+
+model Payslip {
+  id            String             @id @db.Char(36)
+  tenantId      String             @map("tenant_id") @db.Char(36)
+  runEmployeeId String             @map("run_employee_id") @db.Char(36)
+  s3Key         String             @map("s3_key") @db.VarChar(500)
+  sha256        String             @db.Char(64)
+  locale        String             @db.VarChar(16)
+  generatedAt   DateTime           @map("generated_at") @db.DateTime(3)
+  publishedAt   DateTime?          @map("published_at") @db.DateTime(3)
+  runEmployee   PayrollRunEmployee @relation(fields: [tenantId, runEmployeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([tenantId, runEmployeeId])
+  @@map("payslips")
+}
+
+model TaxDeclaration {
+  id           String            @id @db.Char(36)
+  tenantId     String            @map("tenant_id") @db.Char(36)
+  employeeId   String            @map("employee_id") @db.Char(36)
+  fiscalYear   String            @map("fiscal_year") @db.VarChar(9)
+  regime       String?           @db.VarChar(20)
+  declarations Json
+  proofs       Json?
+  status       DeclarationStatus @default(DRAFT)
+  submittedAt  DateTime?         @map("submitted_at") @db.DateTime(3)
+  reviewedBy   String?           @map("reviewed_by") @db.Char(36)
+  reviewedAt   DateTime?         @map("reviewed_at") @db.DateTime(3)
+  createdAt    DateTime          @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt    DateTime          @updatedAt @map("updated_at") @db.DateTime(3)
+  employee     Employee          @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([tenantId, employeeId, fiscalYear])
+  @@map("tax_declarations")
+}
+
+enum DeclarationStatus {
+  DRAFT
+  SUBMITTED
+  VERIFIED
+  REJECTED
+}
+
+model FnfSettlement {
+  id              String      @id @db.Char(36)
+  tenantId        String      @map("tenant_id") @db.Char(36)
+  employeeId      String      @map("employee_id") @db.Char(36)
+  runId           String?     @map("run_id") @db.Char(36)
+  lastWorkingDate DateTime    @map("last_working_date") @db.Date
+  status          FnfStatus   @default(INITIATED)
+  summary         Json?
+  createdAt       DateTime    @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt       DateTime    @updatedAt @map("updated_at") @db.DateTime(3)
+  employee        Employee    @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  run             PayrollRun? @relation(fields: [tenantId, runId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([tenantId, employeeId])
+  @@map("fnf_settlements")
+}
+
+enum FnfStatus {
+  INITIATED
+  CALCULATED
+  APPROVED
+  PAID
+}

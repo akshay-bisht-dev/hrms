@@ -1,0 +1,27 @@
+{
+  "name": "@hrms/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./permissions": "./src/permissions.js",
+    "./queues": "./src/queues.js",
+    "./ids": "./src/ids.js",
+    "./roles": "./src/roles.js",
+    "./schemas/auth": "./src/schemas/auth.js",
+    "./schemas/org": "./src/schemas/org.js",
+    "./schemas/members": "./src/schemas/members.js"
+  },
+  "scripts": {
+    "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js"
+  },
+  "dependencies": {
+    "uuid": "^14.0.3",
+    "zod": "^4.6.7"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {}
+  }
+}

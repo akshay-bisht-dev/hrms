@@ -1,0 +1,337 @@
+{
+  "app": {
+    "name": "Workforce HRMS",
+    "skipToContent": "Skip to content"
+  },
+  "nav": {
+    "main": "Main",
+    "systemStatus": "System status",
+    "security": "Security",
+    "signOut": "Sign out",
+    "account": "Account",
+    "settings": "Settings",
+    "company": "Company",
+    "organization": "Organization",
+    "members": "Members",
+    "roles": "Roles",
+    "switchCompany": "Switch company"
+  },
+  "status": {
+    "title": "System status",
+    "subtitle": "Live readiness of the API and the services it depends on.",
+    "overallOk": "All systems operational",
+    "overallDegraded": "Some services are unavailable",
+    "refresh": "Refresh",
+    "checking": "Checking services…",
+    "loadError": "Couldn't reach the API",
+    "loadErrorDetail": "The backend did not respond. Check that it is running on port 3000.",
+    "retry": "Try again",
+    "service": {
+      "mysql": "Database (MySQL)",
+      "redis": "Cache and queues (Redis)"
+    },
+    "ok": "Operational",
+    "down": "Unavailable",
+    "latency": "{{ms}} ms",
+    "errorReason": {
+      "timeout": "Timed out",
+      "unreachable": "Unreachable"
+    }
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "The page you're looking for doesn't exist.",
+    "back": "Go to system status"
+  },
+  "auth": {
+    "brandTagline": "HR, payroll and remote work in one place.",
+    "email": "Work email",
+    "password": "Password",
+    "fullName": "Your name",
+    "companyName": "Company name",
+    "country": "Country where the company is registered",
+    "passwordHint": "At least 12 characters. A few unrelated words work well.",
+    "login": {
+      "title": "Sign in",
+      "submit": "Sign in",
+      "forgot": "Forgot password?",
+      "noAccount": "New here?",
+      "register": "Create a company account",
+      "notVerified": "Verify your email address to sign in.",
+      "resend": "Send the link again",
+      "resent": "If the address needs verifying, we've sent a new link."
+    },
+    "mfa": {
+      "title": "Two-step verification",
+      "body": "Enter the 6-digit code from your authenticator app.",
+      "code": "Authentication code",
+      "submit": "Verify",
+      "useRecovery": "Use a recovery code instead",
+      "useApp": "Use the authenticator app instead",
+      "recoveryCode": "Recovery code",
+      "back": "Back to sign in"
+    },
+    "register": {
+      "title": "Create your company account",
+      "subtitle": "Start a 14-day trial. No card needed.",
+      "submit": "Create account",
+      "haveAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "doneTitle": "Check your email",
+      "doneBody": "We've sent a link to {{email}}. Open it to confirm your address, then sign in.",
+      "terms": "By creating an account you agree to the terms of service and the data processing agreement."
+    },
+    "verify": {
+      "title": "Confirming your email…",
+      "ok": "Email confirmed",
+      "okBody": "Your address is confirmed. You can sign in now.",
+      "fail": "This link didn't work",
+      "failBody": "It may have expired or already been used. Sign in and we'll offer to send a new one.",
+      "signIn": "Go to sign in"
+    },
+    "forgot": {
+      "title": "Reset your password",
+      "body": "Enter your work email and we'll send you a link to choose a new password.",
+      "submit": "Send reset link",
+      "done": "If an account exists for {{email}}, a reset link is on its way. It works for 30 minutes.",
+      "back": "Back to sign in"
+    },
+    "reset": {
+      "title": "Choose a new password",
+      "submit": "Change password",
+      "done": "Password changed. Sign in with your new password.",
+      "signIn": "Sign in",
+      "missing": "This reset link is incomplete. Request a new one."
+    },
+    "errors": {
+      "generic": "Something went wrong. Try again.",
+      "network": "Couldn't reach the server. Check your connection.",
+      "tooMany": "Too many attempts. Try again in {{minutes}} minutes."
+    }
+  },
+  "security": {
+    "title": "Security",
+    "subtitle": "Two-step verification, active sessions and your password.",
+    "mfa": {
+      "title": "Two-step verification",
+      "on": "On",
+      "off": "Off",
+      "required": "Your role can see sensitive data, so two-step verification is required before you can use those features.",
+      "explain": "Sign-in asks for a code from an authenticator app (such as Google Authenticator, Microsoft Authenticator or 1Password) as well as your password.",
+      "start": "Set up authenticator app",
+      "confirmPassword": "Confirm your password to continue",
+      "continue": "Continue",
+      "scan": "Scan this QR code with your authenticator app, or enter the key manually.",
+      "manualKey": "Setup key",
+      "enterCode": "Enter the 6-digit code shown in the app",
+      "activate": "Turn on",
+      "recoveryTitle": "Save your recovery codes",
+      "recoveryBody": "Each code works once if you lose your phone. They won't be shown again.",
+      "copy": "Copy codes",
+      "copied": "Copied",
+      "saved": "I've saved them",
+      "turnOff": "Turn off",
+      "turnOffTitle": "Turn off two-step verification",
+      "turnedOff": "Two-step verification is off.",
+      "turnedOn": "Two-step verification is on. Other sessions were signed out."
+    },
+    "sessions": {
+      "title": "Active sessions",
+      "current": "This device",
+      "started": "Signed in {{date}}",
+      "lastActive": "Last active {{date}}",
+      "revoke": "Sign out",
+      "revokeAll": "Sign out everywhere",
+      "empty": "No other active sessions.",
+      "unknownDevice": "Unknown device"
+    },
+    "password": {
+      "title": "Change password",
+      "current": "Current password",
+      "new": "New password",
+      "submit": "Change password",
+      "done": "Password changed. Other sessions were signed out."
+    }
+  },
+  "mfaBanner": {
+    "text": "Your role requires two-step verification. Turn it on to use payroll, screenshot and other sensitive features.",
+    "action": "Set it up"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "loading": "Loading…",
+    "close": "Close"
+  },
+  "resource": {
+    "add": "Add",
+    "create": "Create",
+    "save": "Save changes",
+    "created": "Saved.",
+    "updated": "Changes saved.",
+    "deleted": "Deleted.",
+    "edit": "Edit {{name}}",
+    "delete": "Delete {{name}}",
+    "confirmDelete": "Confirm delete",
+    "actions": "Actions",
+    "search": "Search {{what}}",
+    "searchPlaceholder": "Search…",
+    "noMatches": "Nothing matches your search.",
+    "none": "— None —",
+    "choose": "Choose…"
+  },
+  "company": {
+    "title": "Company",
+    "subtitle": "Your company profile and the legal entities that employ people.",
+    "profile": "Company profile",
+    "name": "Company name",
+    "timezone": "Default time zone",
+    "locale": "Default language",
+    "save": "Save profile",
+    "saved": "Company profile saved.",
+    "trialEnds": "Trial ends {{date}}",
+    "region": "Data region: {{region}}",
+    "legalEntities": "Legal entities",
+    "legalEntitiesHelp": "Each legal entity has its own country, currency and payroll settings.",
+    "noLegalEntities": "No legal entities yet.",
+    "le": {
+      "name": "Legal name",
+      "country": "Country",
+      "currency": "Currency",
+      "registration": "Registration number",
+      "fiscalStart": "Fiscal year starts (month 1–12)",
+      "weekStart": "Week starts on (0 = Sunday)",
+      "weekend": "Weekend days (e.g. 0,6)",
+      "timezone": "Time zone"
+    }
+  },
+  "org": {
+    "title": "Organization",
+    "subtitle": "Branches, departments, designations, teams, working hours and holidays.",
+    "tabs": {
+      "branches": "Branches",
+      "departments": "Departments",
+      "designations": "Designations",
+      "teams": "Teams",
+      "schedules": "Work schedules",
+      "holidays": "Holidays"
+    },
+    "branch": {
+      "name": "Branch name",
+      "code": "Code",
+      "legalEntity": "Legal entity",
+      "calendar": "Holiday calendar",
+      "timezone": "Time zone",
+      "city": "City",
+      "empty": "No branches yet. Add your offices here."
+    },
+    "department": {
+      "name": "Department name",
+      "code": "Code",
+      "parent": "Parent department",
+      "empty": "No departments yet."
+    },
+    "designation": {
+      "title": "Title",
+      "level": "Level (1–20)",
+      "empty": "No designations yet."
+    },
+    "team": {
+      "name": "Team name",
+      "department": "Department",
+      "empty": "No teams yet."
+    },
+    "schedule": {
+      "name": "Schedule name",
+      "type": "Type",
+      "start": "Start time (HH:MM)",
+      "end": "End time (HH:MM)",
+      "days": "Working days (e.g. 1,2,3,4,5)",
+      "daily": "Daily hours",
+      "grace": "Grace minutes",
+      "empty": "No work schedules yet.",
+      "fixed": "Fixed",
+      "flexible": "Flexible",
+      "shift": "Shift",
+      "hours": "{{start}}–{{end}}"
+    },
+    "calendar": {
+      "name": "Calendar name",
+      "country": "Country (2 letters)",
+      "year": "Year",
+      "empty": "No holiday calendars yet.",
+      "holidays": "Holidays in {{name}}",
+      "date": "Date",
+      "holidayName": "Holiday",
+      "optional": "Optional holiday",
+      "noHolidays": "No holidays in this calendar yet.",
+      "manage": "Holidays"
+    }
+  },
+  "members": {
+    "title": "Members",
+    "subtitle": "People who can sign in to this company, and their roles.",
+    "invite": "Invite someone",
+    "email": "Email address",
+    "roles": "Roles",
+    "send": "Send invitation",
+    "sent": "Invitation sent to {{email}}.",
+    "status": {
+      "INVITED": "Invited",
+      "ACTIVE": "Active",
+      "SUSPENDED": "Suspended",
+      "REMOVED": "Removed"
+    },
+    "you": "You",
+    "mfaOn": "2-step on",
+    "mfaOff": "2-step off",
+    "editRoles": "Change roles",
+    "saveRoles": "Save roles",
+    "suspend": "Suspend",
+    "reactivate": "Reactivate",
+    "signOut": "Sign out everywhere",
+    "remove": "Remove",
+    "cancelInvite": "Cancel invitation",
+    "confirm": "Confirm",
+    "done": "Done.",
+    "sensitive": "Sensitive",
+    "empty": "No members match.",
+    "lastLogin": "Last sign-in {{date}}",
+    "never": "Never signed in"
+  },
+  "roles": {
+    "title": "Roles",
+    "subtitle": "What each role can do, and for whose data. Sensitive permissions need two-step verification.",
+    "new": "New role",
+    "name": "Role name",
+    "description": "Description",
+    "members": "{{count}} members",
+    "locked": "Always full access",
+    "builtIn": "Built-in",
+    "custom": "Custom",
+    "edit": "Edit permissions",
+    "save": "Save role",
+    "saved": "Role saved.",
+    "delete": "Delete role",
+    "scope": "Scope for {{permission}}",
+    "sensitive": "Sensitive",
+    "scopes": {
+      "OWN": "Own records",
+      "TEAM": "Their team",
+      "DEPARTMENT": "Their department",
+      "BRANCH": "Their branch",
+      "LEGAL_ENTITY": "Their legal entity",
+      "COMPANY": "Whole company"
+    }
+  },
+  "invite": {
+    "title": "Join {{company}}",
+    "body": "You've been invited as {{email}}.",
+    "fullName": "Your name",
+    "password": "Choose a password",
+    "accept": "Accept invitation",
+    "existing": "You already have an account. Accept, then sign in with your usual password.",
+    "done": "You've joined {{company}}. Sign in to continue.",
+    "invalid": "This invitation is invalid or has expired. Ask your administrator for a new one.",
+    "signIn": "Sign in"
+  }
+}

@@ -1,0 +1,374 @@
+// ── Employees ──
+
+model Employee {
+  id                         String                      @id @db.Char(36)
+  tenantId                   String                      @map("tenant_id") @db.Char(36)
+  tenant                     Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  legalEntityId              String                      @map("legal_entity_id") @db.Char(36)
+  employeeCode               String                      @map("employee_code") @db.VarChar(40)
+  firstName                  String                      @map("first_name") @db.VarChar(100)
+  middleName                 String?                     @map("middle_name") @db.VarChar(100)
+  lastName                   String?                     @map("last_name") @db.VarChar(100)
+  preferredName              String?                     @map("preferred_name") @db.VarChar(100)
+  workEmail                  String?                     @map("work_email") @db.VarChar(254)
+  personalEmail              String?                     @map("personal_email") @db.VarChar(254)
+  phone                      String?                     @db.VarChar(32)
+  dateOfBirth                DateTime?                   @map("date_of_birth") @db.Date
+  gender                     String?                     @db.VarChar(20)
+  nationality                String?                     @db.Char(2)
+  workCountry                String                      @map("work_country") @db.Char(2)
+  locale                     String                      @default("en") @db.VarChar(16)
+  timezone                   String                      @db.VarChar(64)
+  payCurrency                String                      @map("pay_currency") @db.Char(3)
+  dateOfJoining              DateTime                    @map("date_of_joining") @db.Date
+  probationEndDate           DateTime?                   @map("probation_end_date") @db.Date
+  exitDate                   DateTime?                   @map("exit_date") @db.Date
+  status                     EmployeeStatus              @default(PREBOARDING)
+  workMode                   WorkMode                    @default(OFFICE) @map("work_mode")
+  employmentType             EmploymentType              @default(FULL_TIME) @map("employment_type")
+  // Current snapshot of the latest effective employment record (kept in sync in the same transaction)
+  departmentId               String?                     @map("department_id") @db.Char(36)
+  designationId              String?                     @map("designation_id") @db.Char(36)
+  branchId                   String?                     @map("branch_id") @db.Char(36)
+  managerId                  String?                     @map("manager_id") @db.Char(36)
+  countryFields              Json?                       @map("country_fields")
+  nationalIdType             String?                     @map("national_id_type") @db.VarChar(30)
+  nationalIdEnc              Bytes?                      @map("national_id_enc") @db.VarBinary(512)
+  nationalIdIndex            String?                     @map("national_id_index") @db.Char(64)
+  createdAt                  DateTime                    @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt                  DateTime                    @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt                  DateTime?                   @map("deleted_at") @db.DateTime(3)
+  legalEntity                LegalEntity                 @relation(fields: [tenantId, legalEntityId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  department                 Department?                 @relation(fields: [tenantId, departmentId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  designation                Designation?                @relation(fields: [tenantId, designationId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  branch                     Branch?                     @relation(fields: [tenantId, branchId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  manager                    Employee?                   @relation("ReportsTo", fields: [tenantId, managerId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  directReports              Employee[]                  @relation("ReportsTo")
+  employmentHistory          EmploymentRecord[]          @relation("EmploymentHistory")
+  managedEmploymentRecords   EmploymentRecord[]          @relation("EmploymentManager")
+  hierarchyAncestors         EmployeeHierarchy[]         @relation("HierarchyDescendant")
+  hierarchyDescendants       EmployeeHierarchy[]         @relation("HierarchyAncestor")
+  reviews                    PerformanceReview[]         @relation("ReviewSubject")
+  reviewsAsReviewer          PerformanceReview[]         @relation("ReviewReviewer")
+  timesheets                 TimesheetApproval[]         @relation("TimesheetOwner")
+  timesheetsToApprove        TimesheetApproval[]         @relation("TimesheetApprover")
+  tenantMembership           TenantMembership?
+  teamMembers                TeamMember[]
+  policyAcknowledgements     PolicyAcknowledgement[]
+  employeeDocuments          EmployeeDocument[]
+  employeeBankAccounts       EmployeeBankAccount[]
+  emergencyContacts          EmergencyContact[]
+  dataSubjectRequests        DataSubjectRequest[]
+  helpdeskTickets            HelpdeskTicket[]
+  shiftAssignments           ShiftAssignment[]
+  attendancePunches          AttendancePunch[]
+  attendanceDays             AttendanceDay[]
+  attendanceRegularizations  AttendanceRegularization[]
+  leaveLedgerEntries         LeaveLedgerEntry[]
+  leaveRequests              LeaveRequest[]
+  employeeSalaries           EmployeeSalary[]
+  payrollRunEmployees        PayrollRunEmployee[]
+  payrollInputs              PayrollInput[]
+  taxDeclarations            TaxDeclaration[]
+  fnfSettlement              FnfSettlement?
+  interviewFeedbacks         InterviewFeedback[]
+  onboardingCase             OnboardingCase?
+  assets                     Asset[]
+  goals                      Goal[]
+  developmentPlans           DevelopmentPlan[]
+  wfhRequests                WfhRequest[]
+  workSessions               WorkSession[]
+  employeeActiveSessions     EmployeeActiveSession[]
+  workActivitySummaries      WorkActivitySummary[]
+  workCorrections            WorkCorrection[]
+  monitoringAcknowledgements MonitoringAcknowledgement[]
+  monitoredDevices           MonitoredDevice[]
+  devicePairingCodes         DevicePairingCode[]
+  screenshotRecords          ScreenshotRecord[]
+  screenshotDisputes         ScreenshotDispute[]
+  privacyIncidents           PrivacyIncident[]
+  projectMembers             ProjectMember[]
+  taskAssignments            TaskAssignment[]
+  taskComments               TaskComment[]
+  taskAttachments            TaskAttachment[]
+  taskTimeEntries            TaskTimeEntry[]
+  dailyWorkReports           DailyWorkReport[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, employeeCode])
+  @@unique([tenantId, nationalIdIndex])
+  @@index([tenantId, status])
+  @@index([tenantId, lastName, firstName])
+  @@index([tenantId, managerId])
+  @@map("employees")
+}
+
+enum EmployeeStatus {
+  PREBOARDING
+  PROBATION
+  ACTIVE
+  NOTICE
+  EXITED
+}
+
+enum WorkMode {
+  OFFICE
+  REMOTE
+  HYBRID
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERN
+}
+
+model EmploymentRecord {
+  id            String        @id @db.Char(36)
+  tenantId      String        @map("tenant_id") @db.Char(36)
+  employeeId    String        @map("employee_id") @db.Char(36)
+  departmentId  String?       @map("department_id") @db.Char(36)
+  designationId String?       @map("designation_id") @db.Char(36)
+  branchId      String?       @map("branch_id") @db.Char(36)
+  managerId     String?       @map("manager_id") @db.Char(36)
+  scheduleId    String?       @map("schedule_id") @db.Char(36)
+  changeReason  String        @map("change_reason") @db.VarChar(60)
+  effectiveFrom DateTime      @map("effective_from") @db.Date
+  effectiveTo   DateTime?     @map("effective_to") @db.Date
+  createdBy     String        @map("created_by") @db.Char(36)
+  createdAt     DateTime      @default(now()) @map("created_at") @db.DateTime(3)
+  employee      Employee      @relation("EmploymentHistory", fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  manager       Employee?     @relation("EmploymentManager", fields: [tenantId, managerId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  department    Department?   @relation(fields: [tenantId, departmentId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  designation   Designation?  @relation(fields: [tenantId, designationId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  branch        Branch?       @relation(fields: [tenantId, branchId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  schedule      WorkSchedule? @relation(fields: [tenantId, scheduleId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId, employeeId, effectiveFrom])
+  @@index([tenantId, managerId])
+  @@map("employment_records")
+}
+
+// Closure table of the reporting hierarchy; rebuilt transactionally on manager change.
+model EmployeeHierarchy {
+  tenantId     String   @map("tenant_id") @db.Char(36)
+  ancestorId   String   @map("ancestor_id") @db.Char(36)
+  descendantId String   @map("descendant_id") @db.Char(36)
+  depth        Int
+  ancestor     Employee @relation("HierarchyAncestor", fields: [tenantId, ancestorId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+  descendant   Employee @relation("HierarchyDescendant", fields: [tenantId, descendantId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@id([tenantId, ancestorId, descendantId])
+  @@index([tenantId, descendantId])
+  @@map("employee_hierarchies")
+}
+
+model EmployeeDocument {
+  id         String         @id @db.Char(36)
+  tenantId   String         @map("tenant_id") @db.Char(36)
+  employeeId String         @map("employee_id") @db.Char(36)
+  category   String         @db.VarChar(40)
+  fileName   String         @map("file_name") @db.VarChar(255)
+  s3Key      String         @map("s3_key") @db.VarChar(500)
+  mimeType   String         @map("mime_type") @db.VarChar(100)
+  sizeBytes  Int            @map("size_bytes")
+  sha256     String?        @db.Char(64)
+  scanStatus FileScanStatus @default(PENDING) @map("scan_status")
+  verifiedAt DateTime?      @map("verified_at") @db.DateTime(3)
+  verifiedBy String?        @map("verified_by") @db.Char(36)
+  expiresOn  DateTime?      @map("expires_on") @db.Date
+  createdAt  DateTime       @default(now()) @map("created_at") @db.DateTime(3)
+  deletedAt  DateTime?      @map("deleted_at") @db.DateTime(3)
+  employee   Employee       @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId, employeeId])
+  @@map("employee_documents")
+}
+
+enum FileScanStatus {
+  PENDING
+  CLEAN
+  INFECTED
+  FAILED
+}
+
+model EmployeeBankAccount {
+  id                 String    @id @db.Char(36)
+  tenantId           String    @map("tenant_id") @db.Char(36)
+  employeeId         String    @map("employee_id") @db.Char(36)
+  accountHolder      String    @map("account_holder") @db.VarChar(150)
+  accountNumberEnc   Bytes     @map("account_number_enc") @db.VarBinary(512)
+  accountNumberLast4 String    @map("account_number_last4") @db.Char(4)
+  bankFields         Json      @map("bank_fields")
+  currency           String    @db.Char(3)
+  isPrimary          Boolean   @default(true) @map("is_primary")
+  effectiveFrom      DateTime  @map("effective_from") @db.Date
+  effectiveTo        DateTime? @map("effective_to") @db.Date
+  createdAt          DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  employee           Employee  @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId, employeeId, effectiveFrom])
+  @@map("employee_bank_accounts")
+}
+
+model EmergencyContact {
+  id           String   @id @db.Char(36)
+  tenantId     String   @map("tenant_id") @db.Char(36)
+  employeeId   String   @map("employee_id") @db.Char(36)
+  name         String   @db.VarChar(150)
+  relationship String   @db.VarChar(40)
+  phone        String   @db.VarChar(32)
+  email        String?  @db.VarChar(254)
+  createdAt    DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  employee     Employee @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@index([tenantId, employeeId])
+  @@map("emergency_contacts")
+}
+
+model BulkImportJob {
+  id         String     @id @db.Char(36)
+  tenantId   String     @map("tenant_id") @db.Char(36)
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  type       ImportType
+  fileKey    String     @map("file_key") @db.VarChar(500)
+  fileSha256 String     @map("file_sha256") @db.Char(64)
+  status     JobStatus  @default(QUEUED)
+  totalRows  Int?       @map("total_rows")
+  okRows     Int?       @map("ok_rows")
+  errorRows  Int?       @map("error_rows")
+  resultKey  String?    @map("result_key") @db.VarChar(500)
+  createdBy  String     @map("created_by") @db.Char(36)
+  createdAt  DateTime   @default(now()) @map("created_at") @db.DateTime(3)
+  finishedAt DateTime?  @map("finished_at") @db.DateTime(3)
+
+  @@unique([tenantId, type, fileSha256])
+  @@map("bulk_import_jobs")
+}
+
+enum ImportType {
+  EMPLOYEES
+  ATTENDANCE
+  SALARIES
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  PARTIAL
+}
+
+// Generic multi-level approval chain used by leave, WFH, corrections, reports, timesheets, requisitions, offers, payroll.
+model ApprovalStep {
+  id                 String         @id @db.Char(36)
+  tenantId           String         @map("tenant_id") @db.Char(36)
+  tenant             Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  entityType         ApprovalEntity @map("entity_type")
+  entityId           String         @map("entity_id") @db.Char(36)
+  stepNo             Int            @map("step_no")
+  approverEmployeeId String?        @map("approver_employee_id") @db.Char(36)
+  approverRoleId     String?        @map("approver_role_id") @db.Char(36)
+  status             ApprovalStatus @default(PENDING)
+  decidedAt          DateTime?      @map("decided_at") @db.DateTime(3)
+  decidedBy          String?        @map("decided_by") @db.Char(36)
+  comment            String?        @db.Text
+  createdAt          DateTime       @default(now()) @map("created_at") @db.DateTime(3)
+
+  @@unique([tenantId, entityType, entityId, stepNo])
+  @@index([tenantId, approverEmployeeId, status])
+  @@map("approval_steps")
+}
+
+enum ApprovalEntity {
+  LEAVE_REQUEST
+  WFH_REQUEST
+  ATTENDANCE_REGULARIZATION
+  WORK_CORRECTION
+  DAILY_WORK_REPORT
+  TIMESHEET
+  JOB_REQUISITION
+  OFFER
+  PAYROLL_RUN
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CHANGES_REQUESTED
+  SKIPPED
+  CANCELLED
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model DataSubjectRequest {
+  id             String    @id @db.Char(36)
+  tenantId       String    @map("tenant_id") @db.Char(36)
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  employeeId     String?   @map("employee_id") @db.Char(36)
+  requesterEmail String    @map("requester_email") @db.VarChar(254)
+  type           DsrType
+  regime         String    @db.VarChar(20)
+  status         DsrStatus @default(RECEIVED)
+  dueAt          DateTime  @map("due_at") @db.DateTime(3)
+  closedAt       DateTime? @map("closed_at") @db.DateTime(3)
+  notes          String?   @db.Text
+  createdAt      DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.DateTime(3)
+  employee       Employee? @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId, status, dueAt])
+  @@map("data_subject_requests")
+}
+
+enum DsrType {
+  ACCESS
+  CORRECTION
+  ERASURE
+  OBJECTION
+  RESTRICTION
+  PORTABILITY
+  GRIEVANCE
+}
+
+enum DsrStatus {
+  RECEIVED
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+}
+
+model HelpdeskTicket {
+  id                 String       @id @db.Char(36)
+  tenantId           String       @map("tenant_id") @db.Char(36)
+  employeeId         String       @map("employee_id") @db.Char(36)
+  assigneeEmployeeId String?      @map("assignee_employee_id") @db.Char(36)
+  category           String       @db.VarChar(60)
+  subject            String       @db.VarChar(200)
+  body               String       @db.Text
+  status             TicketStatus @default(OPEN)
+  createdAt          DateTime     @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt          DateTime     @updatedAt @map("updated_at") @db.DateTime(3)
+  closedAt           DateTime?    @map("closed_at") @db.DateTime(3)
+  employee           Employee     @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId, status])
+  @@index([tenantId, employeeId])
+  @@map("helpdesk_tickets")
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}

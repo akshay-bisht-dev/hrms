@@ -1,0 +1,342 @@
+// ── Tenancy, RBAC, billing, audit ──
+
+model Tenant {
+  id                    String                 @id @db.Char(36)
+  slug                  String                 @unique @db.VarChar(63)
+  name                  String                 @db.VarChar(200)
+  status                TenantStatus           @default(TRIAL)
+  region                String                 @db.VarChar(20)
+  countryCode           String                 @map("country_code") @db.Char(2)
+  defaultCurrency       String                 @map("default_currency") @db.Char(3)
+  defaultLocale         String                 @default("en") @map("default_locale") @db.VarChar(16)
+  timezone              String                 @db.VarChar(64)
+  planId                String?                @map("plan_id") @db.Char(36)
+  trialEndsAt           DateTime?              @map("trial_ends_at") @db.DateTime(3)
+  suspendedAt           DateTime?              @map("suspended_at") @db.DateTime(3)
+  createdAt             DateTime               @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt             DateTime               @updatedAt @map("updated_at") @db.DateTime(3)
+  plan                  Plan?                  @relation(fields: [planId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  tenantMemberships     TenantMembership[]
+  roles                 Role[]
+  breakGlassGrants      BreakGlassGrant[]
+  subscriptions         Subscription[]
+  usageSnapshots        UsageSnapshot[]
+  legalEntities         LegalEntity[]
+  departments           Department[]
+  designations          Designation[]
+  workSchedules         WorkSchedule[]
+  holidayCalendars      HolidayCalendar[]
+  companyPolicies       CompanyPolicy[]
+  announcements         Announcement[]
+  employees             Employee[]
+  bulkImportJobs        BulkImportJob[]
+  approvalSteps         ApprovalStep[]
+  dataSubjectRequests   DataSubjectRequest[]
+  shifts                Shift[]
+  overtimeRules         OvertimeRule[]
+  leaveTypes            LeaveType[]
+  salaryComponents      SalaryComponent[]
+  jobRequisitions       JobRequisition[]
+  candidates            Candidate[]
+  onboardingTemplates   OnboardingTemplate[]
+  assets                Asset[]
+  performanceCycles     PerformanceCycle[]
+  workLocations         WorkLocation[]
+  workPolicies          WorkPolicy[]
+  monitoringActivations MonitoringActivation[]
+  applicationCategories ApplicationCategory[]
+  projects              Project[]
+
+  @@map("tenants")
+}
+
+enum TenantStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  SUSPENDED
+  CANCELLED
+}
+
+model TenantMembership {
+  id              String           @id @db.Char(36)
+  tenantId        String           @map("tenant_id") @db.Char(36)
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  userId          String           @map("user_id") @db.Char(36)
+  employeeId      String?          @map("employee_id") @db.Char(36)
+  status          MembershipStatus @default(INVITED)
+  invitedAt       DateTime?        @map("invited_at") @db.DateTime(3)
+  joinedAt        DateTime?        @map("joined_at") @db.DateTime(3)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.DateTime(3)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  employee        Employee?        @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  membershipRoles MembershipRole[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, userId])
+  @@unique([tenantId, employeeId])
+  @@index([userId])
+  @@map("tenant_memberships")
+}
+
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  REMOVED
+}
+
+model Role {
+  id              String           @id @db.Char(36)
+  tenantId        String           @map("tenant_id") @db.Char(36)
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name            String           @db.VarChar(80)
+  description     String?          @db.VarChar(255)
+  isSystem        Boolean          @default(false) @map("is_system")
+  systemKey       String?          @map("system_key") @db.VarChar(40)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.DateTime(3)
+  rolePermissions RolePermission[]
+  membershipRoles MembershipRole[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, name])
+  @@map("roles")
+}
+
+model RolePermission {
+  tenantId       String     @map("tenant_id") @db.Char(36)
+  roleId         String     @map("role_id") @db.Char(36)
+  permissionCode String     @map("permission_code") @db.VarChar(80)
+  scope          DataScope
+  role           Role       @relation(fields: [tenantId, roleId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+  permission     Permission @relation(fields: [permissionCode], references: [code], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([roleId, permissionCode])
+  @@index([tenantId, permissionCode])
+  @@map("role_permissions")
+}
+
+enum DataScope {
+  OWN
+  TEAM
+  DEPARTMENT
+  BRANCH
+  LEGAL_ENTITY
+  COMPANY
+}
+
+model MembershipRole {
+  tenantId     String           @map("tenant_id") @db.Char(36)
+  membershipId String           @map("membership_id") @db.Char(36)
+  roleId       String           @map("role_id") @db.Char(36)
+  grantedBy    String?          @map("granted_by") @db.Char(36)
+  grantedAt    DateTime         @default(now()) @map("granted_at") @db.DateTime(3)
+  membership   TenantMembership @relation(fields: [tenantId, membershipId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+  role         Role             @relation(fields: [tenantId, roleId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@id([membershipId, roleId])
+  @@index([tenantId, roleId])
+  @@map("membership_roles")
+}
+
+model BreakGlassGrant {
+  id              String           @id @db.Char(36)
+  tenantId        String           @map("tenant_id") @db.Char(36)
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  platformAdminId String           @map("platform_admin_id") @db.Char(36)
+  reason          String           @db.Text
+  status          BreakGlassStatus @default(REQUESTED)
+  approvedBy      String?          @map("approved_by") @db.Char(36)
+  startsAt        DateTime?        @map("starts_at") @db.DateTime(3)
+  expiresAt       DateTime?        @map("expires_at") @db.DateTime(3)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+  platformAdmin   PlatformAdmin    @relation(fields: [platformAdminId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId, status])
+  @@map("break_glass_grants")
+}
+
+enum BreakGlassStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  EXPIRED
+  REVOKED
+}
+
+model Subscription {
+  id                     String             @id @db.Char(36)
+  tenantId               String             @map("tenant_id") @db.Char(36)
+  tenant                 Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  planId                 String             @map("plan_id") @db.Char(36)
+  status                 SubscriptionStatus
+  provider               PaymentProvider
+  providerSubscriptionId String?            @map("provider_subscription_id") @db.VarChar(120)
+  currency               String             @db.Char(3)
+  seats                  Int
+  addons                 Json
+  currentPeriodStart     DateTime           @map("current_period_start") @db.DateTime(3)
+  currentPeriodEnd       DateTime           @map("current_period_end") @db.DateTime(3)
+  cancelAt               DateTime?          @map("cancel_at") @db.DateTime(3)
+  createdAt              DateTime           @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt              DateTime           @updatedAt @map("updated_at") @db.DateTime(3)
+  plan                   Plan               @relation(fields: [planId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  invoices               Invoice[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, status])
+  @@map("subscriptions")
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  INCOMPLETE
+}
+
+enum PaymentProvider {
+  STRIPE
+  RAZORPAY
+  MANUAL
+}
+
+model Invoice {
+  id                String        @id @db.Char(36)
+  tenantId          String        @map("tenant_id") @db.Char(36)
+  subscriptionId    String        @map("subscription_id") @db.Char(36)
+  number            String        @db.VarChar(40)
+  status            InvoiceStatus
+  currency          String        @db.Char(3)
+  subtotal          Decimal       @db.Decimal(19, 4)
+  tax               Decimal       @db.Decimal(19, 4)
+  total             Decimal       @db.Decimal(19, 4)
+  providerInvoiceId String?       @map("provider_invoice_id") @db.VarChar(120)
+  pdfKey            String?       @map("pdf_key") @db.VarChar(500)
+  issuedAt          DateTime      @map("issued_at") @db.DateTime(3)
+  dueAt             DateTime?     @map("due_at") @db.DateTime(3)
+  paidAt            DateTime?     @map("paid_at") @db.DateTime(3)
+  subscription      Subscription  @relation(fields: [tenantId, subscriptionId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([tenantId, number])
+  @@map("invoices")
+}
+
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  UNCOLLECTIBLE
+}
+
+model UsageSnapshot {
+  id                 String   @id @db.Char(36)
+  tenantId           String   @map("tenant_id") @db.Char(36)
+  tenant             Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  periodDate         DateTime @map("period_date") @db.Date
+  activeEmployees    Int      @map("active_employees")
+  monitoredEmployees Int      @map("monitored_employees")
+  storageBytes       BigInt   @map("storage_bytes")
+  createdAt          DateTime @default(now()) @map("created_at") @db.DateTime(3)
+
+  @@unique([tenantId, periodDate])
+  @@map("usage_snapshots")
+}
+
+// Append-only. UPDATE/DELETE blocked by trigger (see migrations/sql/triggers.sql). No FKs: partition-ready.
+model AuditLog {
+  id          String    @id @db.Char(36)
+  tenantId    String?   @map("tenant_id") @db.Char(36)
+  actorType   ActorType @map("actor_type")
+  actorUserId String?   @map("actor_user_id") @db.Char(36)
+  action      String    @db.VarChar(80)
+  entityType  String    @map("entity_type") @db.VarChar(60)
+  entityId    String?   @map("entity_id") @db.Char(36)
+  changes     Json?
+  ipAddress   String?   @map("ip_address") @db.VarChar(45)
+  userAgent   String?   @map("user_agent") @db.VarChar(255)
+  requestId   String?   @map("request_id") @db.VarChar(64)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, entityType, entityId])
+  @@index([tenantId, actorUserId, createdAt])
+  @@map("audit_logs")
+}
+
+enum ActorType {
+  USER
+  DEVICE
+  SYSTEM
+  PLATFORM_ADMIN
+}
+
+// Transactional outbox: written in the same transaction as the domain change, drained to BullMQ.
+model OutboxEvent {
+  id          BigInt    @id @default(autoincrement())
+  tenantId    String?   @map("tenant_id") @db.Char(36)
+  topic       String    @db.VarChar(80)
+  payload     Json
+  availableAt DateTime  @default(now()) @map("available_at") @db.DateTime(3)
+  publishedAt DateTime? @map("published_at") @db.DateTime(3)
+  attempts    Int       @default(0)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+
+  @@index([publishedAt, availableAt])
+  @@map("outbox_events")
+}
+
+model IdempotencyRecord {
+  id             String   @id @db.Char(36)
+  tenantId       String   @map("tenant_id") @db.Char(36)
+  scope          String   @db.VarChar(80)
+  key            String   @db.VarChar(120)
+  requestHash    String   @map("request_hash") @db.Char(64)
+  responseStatus Int?     @map("response_status")
+  responseBody   Json?    @map("response_body")
+  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  expiresAt      DateTime @map("expires_at") @db.DateTime(3)
+
+  @@unique([tenantId, scope, key])
+  @@index([expiresAt])
+  @@map("idempotency_records")
+}
+
+model Notification {
+  id              String    @id @db.Char(36)
+  tenantId        String    @map("tenant_id") @db.Char(36)
+  recipientUserId String    @map("recipient_user_id") @db.Char(36)
+  type            String    @db.VarChar(60)
+  title           String    @db.VarChar(200)
+  body            String?   @db.Text
+  link            String?   @db.VarChar(500)
+  readAt          DateTime? @map("read_at") @db.DateTime(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+
+  @@index([tenantId, recipientUserId, readAt])
+  @@map("notifications")
+}
+
+model MessageTemplate {
+  id        String              @id @db.Char(36)
+  tenantId  String?             @map("tenant_id") @db.Char(36)
+  key       String              @db.VarChar(80)
+  locale    String              @db.VarChar(16)
+  channel   NotificationChannel
+  version   Int                 @default(1)
+  subject   String?             @db.VarChar(200)
+  body      String              @db.Text
+  createdAt DateTime            @default(now()) @map("created_at") @db.DateTime(3)
+
+  @@unique([tenantId, key, locale, channel, version])
+  @@map("message_templates")
+}
+
+enum NotificationChannel {
+  EMAIL
+  IN_APP
+}

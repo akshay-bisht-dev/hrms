@@ -1,0 +1,54 @@
+{
+  "name": "@hrms/backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./app": "./src/app.js",
+    "./lib/*": "./src/lib/*",
+    "./config/*": "./src/config/*"
+  },
+  "scripts": {
+    "dev": "node --env-file-if-exists=../../.env --watch src/server.js",
+    "start": "node src/server.js",
+    "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --testPathIgnorePatterns=integration",
+    "test:integration": "node --env-file-if-exists=../../.env --experimental-vm-modules ../../node_modules/jest/bin/jest.js --testPathPatterns=integration --runInBand",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:seed": "node --env-file-if-exists=../../.env prisma/seed.mjs",
+    "db:check": "node --env-file-if-exists=../../.env prisma/checks/db-smoke.mjs",
+    "keys:dev": "node scripts/keys-dev.mjs"
+  },
+  "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^9.1.0",
+    "@hrms/shared": "0.1.0",
+    "@prisma/adapter-mariadb": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "argon2": "^0.45.2",
+    "bullmq": "^6.7.10",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.5",
+    "helmet": "^8.3.0",
+    "ioredis": "^6.1.0",
+    "jose": "^6.2.18",
+    "pino": "^10.4.0",
+    "pino-http": "^11.0.0",
+    "rate-limit-redis": "^6.0.2",
+    "swagger-ui-express": "^5.0.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "prisma": "7.10.1",
+    "supertest": "^7.3.2"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {},
+    "testMatch": [
+      "**/test/**/*.test.js"
+    ]
+  }
+}

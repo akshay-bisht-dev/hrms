@@ -1,0 +1,139 @@
+// ── Onboarding & assets ──
+
+model OnboardingTemplate {
+  id                      String                   @id @db.Char(36)
+  tenantId                String                   @map("tenant_id") @db.Char(36)
+  tenant                  Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name                    String                   @db.VarChar(120)
+  legalEntityId           String?                  @map("legal_entity_id") @db.Char(36)
+  createdAt               DateTime                 @default(now()) @map("created_at") @db.DateTime(3)
+  onboardingTemplateTasks OnboardingTemplateTask[]
+  onboardingCases         OnboardingCase[]
+
+  @@unique([tenantId, id])
+  @@map("onboarding_templates")
+}
+
+model OnboardingTemplateTask {
+  id               String             @id @db.Char(36)
+  tenantId         String             @map("tenant_id") @db.Char(36)
+  templateId       String             @map("template_id") @db.Char(36)
+  title            String             @db.VarChar(200)
+  ownerRole        OnboardingOwner    @map("owner_role")
+  dueOffsetDays    Int                @default(0) @map("due_offset_days")
+  requiresDocument Boolean            @default(false) @map("requires_document")
+  sequence         Int
+  template         OnboardingTemplate @relation(fields: [tenantId, templateId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@index([tenantId, templateId])
+  @@map("onboarding_template_tasks")
+}
+
+enum OnboardingOwner {
+  HR
+  IT
+  MANAGER
+  EMPLOYEE
+  FINANCE
+}
+
+model OnboardingCase {
+  id                  String               @id @db.Char(36)
+  tenantId            String               @map("tenant_id") @db.Char(36)
+  employeeId          String               @map("employee_id") @db.Char(36)
+  offerId             String?              @map("offer_id") @db.Char(36)
+  templateId          String?              @map("template_id") @db.Char(36)
+  status              OnboardingStatus     @default(PREBOARDING)
+  startDate           DateTime             @map("start_date") @db.Date
+  completedAt         DateTime?            @map("completed_at") @db.DateTime(3)
+  createdAt           DateTime             @default(now()) @map("created_at") @db.DateTime(3)
+  employee            Employee             @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  offer               Offer?               @relation(fields: [tenantId, offerId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  template            OnboardingTemplate?  @relation(fields: [tenantId, templateId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  onboardingTasks     OnboardingTask[]
+  onboardingDocuments OnboardingDocument[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, employeeId])
+  @@map("onboarding_cases")
+}
+
+enum OnboardingStatus {
+  PREBOARDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model OnboardingTask {
+  id                 String          @id @db.Char(36)
+  tenantId           String          @map("tenant_id") @db.Char(36)
+  caseId             String          @map("case_id") @db.Char(36)
+  title              String          @db.VarChar(200)
+  ownerRole          OnboardingOwner @map("owner_role")
+  assigneeEmployeeId String?         @map("assignee_employee_id") @db.Char(36)
+  dueDate            DateTime?       @map("due_date") @db.Date
+  status             ChecklistStatus @default(PENDING)
+  completedAt        DateTime?       @map("completed_at") @db.DateTime(3)
+  completedBy        String?         @map("completed_by") @db.Char(36)
+  onboardingCase     OnboardingCase  @relation(fields: [tenantId, caseId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@index([tenantId, caseId])
+  @@index([tenantId, assigneeEmployeeId, status])
+  @@map("onboarding_tasks")
+}
+
+enum ChecklistStatus {
+  PENDING
+  DONE
+  SKIPPED
+}
+
+model OnboardingDocument {
+  id              String         @id @db.Char(36)
+  tenantId        String         @map("tenant_id") @db.Char(36)
+  caseId          String         @map("case_id") @db.Char(36)
+  category        String         @db.VarChar(60)
+  s3Key           String?        @map("s3_key") @db.VarChar(500)
+  status          DocumentStatus @default(REQUESTED)
+  verifiedBy      String?        @map("verified_by") @db.Char(36)
+  verifiedAt      DateTime?      @map("verified_at") @db.DateTime(3)
+  rejectionReason String?        @map("rejection_reason") @db.VarChar(255)
+  onboardingCase  OnboardingCase @relation(fields: [tenantId, caseId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@index([tenantId, caseId])
+  @@map("onboarding_documents")
+}
+
+enum DocumentStatus {
+  REQUESTED
+  UPLOADED
+  VERIFIED
+  REJECTED
+}
+
+model Asset {
+  id                 String      @id @db.Char(36)
+  tenantId           String      @map("tenant_id") @db.Char(36)
+  tenant             Tenant      @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  tag                String      @db.VarChar(60)
+  type               String      @db.VarChar(40)
+  description        String?     @db.VarChar(255)
+  serialNumber       String?     @map("serial_number") @db.VarChar(120)
+  status             AssetStatus @default(IN_STOCK)
+  assignedEmployeeId String?     @map("assigned_employee_id") @db.Char(36)
+  assignedAt         DateTime?   @map("assigned_at") @db.DateTime(3)
+  createdAt          DateTime    @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt          DateTime    @updatedAt @map("updated_at") @db.DateTime(3)
+  assignedEmployee   Employee?   @relation(fields: [tenantId, assignedEmployeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([tenantId, tag])
+  @@map("assets")
+}
+
+enum AssetStatus {
+  IN_STOCK
+  ASSIGNED
+  RETURNED
+  RETIRED
+}

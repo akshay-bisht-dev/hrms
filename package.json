@@ -1,0 +1,48 @@
+{
+  "name": "hrms",
+  "private": true,
+  "type": "module",
+  "description": "Workforce HRMS — multi-tenant HR and remote workforce management SaaS (JavaScript only)",
+  "workspaces": [
+    "packages/shared",
+    "apps/backend",
+    "apps/worker",
+    "apps/frontend"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check:no-ts": "node infrastructure/scripts/check-no-typescript.mjs",
+    "check:syntax": "node infrastructure/scripts/check-syntax.mjs",
+    "test": "npm run test --workspaces --if-present",
+    "test:integration": "npm run test:integration --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "dev:backend": "npm run dev -w apps/backend",
+    "dev:worker": "npm run dev -w apps/worker",
+    "dev:frontend": "npm run dev -w apps/frontend",
+    "db:generate": "npm run db:generate -w apps/backend",
+    "db:migrate": "npm run db:migrate -w apps/backend",
+    "db:migrate:dev": "npm run db:migrate:dev -w apps/backend",
+    "db:seed": "npm run db:seed -w apps/backend",
+    "postinstall": "npm run db:generate",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@playwright/test": "^1.63.0",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.14.0",
+    "ioredis": "^6.1.0",
+    "jest": "^30.5.2",
+    "prettier": "^3.10.1"
+  },
+  "overrides": {
+    "effect": "3.22.5"
+  }
+}

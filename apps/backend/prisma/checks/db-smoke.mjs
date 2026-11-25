@@ -1,0 +1,310 @@
+// Database smoke checks: run against an EMPTY, freshly migrated database (it inserts test rows).
+// Usage: DATABASE_URL=mysql://root:<pw>@127.0.0.1:3306/hrms_test node prisma/checks/db-smoke.mjs
+// Sprint 1 turns these into Jest integration tests with Testcontainers.
+import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaMariaDb } from '@prisma/adapter-mariadb';
+import { randomUUID as id } from 'node:crypto';
+
+const db = new PrismaClient({ adapter: new PrismaMariaDb(process.env.DATABASE_URL) });
+const results = [];
+const check = async (name, fn, expectError) => {
+  try {
+    await fn();
+    results.push([name, expectError ? 'FAIL (no error)' : 'pass']);
+  } catch (e) {
+    results.push([
+      name,
+      expectError && String(e.message).match(expectError)
+        ? 'pass'
+        : 'FAIL: ' + e.message.split('\n').slice(-2).join(' '),
+    ]);
+  }
+};
+
+await db.countryProfile.create({
+  data: {
+    code: 'IN',
+    name: 'India',
+    defaultCurrency: 'INR',
+    defaultLocale: 'en-IN',
+    weekendDays: [0],
+    fieldRules: {},
+    nationalIdTypes: [],
+    bankFieldFormat: {},
+    addressFormat: {},
+  },
+});
+const mkTenant = async (slug) => {
+  const t = await db.tenant.create({
+    data: {
+      id: id(),
+      slug,
+      name: slug,
+      region: 'in',
+      countryCode: 'IN',
+      defaultCurrency: 'INR',
+      timezone: 'Asia/Kolkata',
+    },
+  });
+  const le = await db.legalEntity.create({
+    data: {
+      id: id(),
+      tenantId: t.id,
+      name: slug + ' Pvt Ltd',
+      countryCode: 'IN',
+      currency: 'INR',
+      weekendDays: [0],
+      timezone: 'Asia/Kolkata',
+    },
+  });
+  const emp = await db.employee.create({
+    data: {
+      id: id(),
+      tenantId: t.id,
+      legalEntityId: le.id,
+      employeeCode: 'E1',
+      firstName: 'A',
+      workCountry: 'IN',
+      timezone: 'Asia/Kolkata',
+      payCurrency: 'INR',
+      dateOfJoining: new Date('2026-01-01'),
+    },
+  });
+  return { t, le, emp };
+};
+const A = await mkTenant('tenant-a');
+const B = await mkTenant('tenant-b');
+
+await check(
+  'employee in tenant B cannot use tenant A legal entity (composite FK)',
+  () =>
+    db.employee.create({
+      data: {
+        id: id(),
+        tenantId: B.t.id,
+        legalEntityId: A.le.id,
+        employeeCode: 'X',
+        firstName: 'X',
+        workCountry: 'IN',
+        timezone: 'UTC',
+        payCurrency: 'INR',
+        dateOfJoining: new Date(),
+      },
+    }),
+  /Foreign key|constraint/i,
+);
+
+await check(
+  'tenant B task cannot be assigned to tenant A employee (composite FK)',
+  async () => {
+    const task = await db.task.create({ data: { id: id(), tenantId: B.t.id, title: 'T' } });
+    await db.taskAssignment.create({
+      data: { id: id(), tenantId: B.t.id, taskId: task.id, employeeId: A.emp.id },
+    });
+  },
+  /Foreign key|constraint/i,
+);
+
+await check('decimal money round-trips exactly', async () => {
+  const s = await db.salaryStructure.create({
+    data: {
+      id: id(),
+      tenantId: A.t.id,
+      legalEntityId: A.le.id,
+      name: 'S',
+      currency: 'INR',
+      effectiveFrom: new Date('2026-01-01'),
+    },
+  });
+  const sal = await db.employeeSalary.create({
+    data: {
+      id: id(),
+      tenantId: A.t.id,
+      employeeId: A.emp.id,
+      structureId: s.id,
+      currency: 'INR',
+      annualCtc: new Prisma.Decimal('1234567.8912'),
+      effectiveFrom: new Date('2026-01-01'),
+      reason: 'JOIN',
+    },
+  });
+  const back = await db.employeeSalary.findUnique({ where: { id: sal.id } });
+  if (back.annualCtc.toString() !== '1234567.8912') throw new Error('got ' + back.annualCtc);
+});
+
+const period = await db.payrollPeriod.create({
+  data: {
+    id: id(),
+    tenantId: A.t.id,
+    legalEntityId: A.le.id,
+    frequency: 'MONTHLY',
+    startDate: new Date('2026-11-01'),
+    endDate: new Date('2026-11-30'),
+    payDate: new Date('2026-11-30'),
+  },
+});
+const run = await db.payrollRun.create({
+  data: { id: id(), tenantId: A.t.id, periodId: period.id, currency: 'INR', createdBy: id() },
+});
+const re = await db.payrollRunEmployee.create({
+  data: {
+    id: id(),
+    tenantId: A.t.id,
+    runId: run.id,
+    employeeId: A.emp.id,
+    currency: 'INR',
+    paidDays: 30,
+    lopDays: 0,
+    gross: '100000.00',
+    deductions: '12000.00',
+    employerCost: '8000.00',
+    net: '88000.00',
+  },
+});
+await db.payrollLine.create({
+  data: {
+    id: id(),
+    tenantId: A.t.id,
+    runEmployeeId: re.id,
+    code: 'BASIC',
+    label: 'Basic',
+    kind: 'EARNING',
+    amount: '50000.00',
+    sequence: 1,
+  },
+});
+await db.payrollRun.update({
+  where: { id: run.id },
+  data: { status: 'FINALIZED', finalizedAt: new Date(), finalHash: 'a'.repeat(64) },
+});
+
+await check(
+  'finalized run: payroll line update blocked',
+  () => db.payrollLine.updateMany({ where: { runEmployeeId: re.id }, data: { amount: '1.00' } }),
+  /IMMUTABLE/,
+);
+await check(
+  'finalized run: new payroll line blocked',
+  () =>
+    db.payrollLine.create({
+      data: {
+        id: id(),
+        tenantId: A.t.id,
+        runEmployeeId: re.id,
+        code: 'X',
+        label: 'X',
+        kind: 'EARNING',
+        amount: '1.00',
+        sequence: 2,
+      },
+    }),
+  /IMMUTABLE/,
+);
+await check(
+  'finalized run: net pay update blocked',
+  () => db.payrollRunEmployee.update({ where: { id: re.id }, data: { net: '1.00' } }),
+  /IMMUTABLE/,
+);
+await check(
+  'finalized run: status back to DRAFT blocked',
+  () => db.payrollRun.update({ where: { id: run.id }, data: { status: 'DRAFT' } }),
+  /IMMUTABLE/,
+);
+await check('finalized run: FINALIZED -> PAID allowed', () =>
+  db.payrollRun.update({ where: { id: run.id }, data: { status: 'PAID', paidAt: new Date() } }),
+);
+await check('paid run: delete blocked', () => db.payrollRun.delete({ where: { id: run.id } }), /IMMUTABLE/);
+
+const al = await db.auditLog.create({
+  data: { id: id(), tenantId: A.t.id, actorType: 'SYSTEM', action: 'test', entityType: 'x' },
+});
+await check(
+  'audit log update blocked',
+  () => db.auditLog.update({ where: { id: al.id }, data: { action: 'tampered' } }),
+  /IMMUTABLE/,
+);
+await check('audit log delete blocked', () => db.auditLog.delete({ where: { id: al.id } }), /IMMUTABLE/);
+
+const loc = await db.workLocation.create({ data: { id: id(), tenantId: A.t.id, name: 'WFH', type: 'WFH' } });
+const pol = await db.workPolicy.create({
+  data: {
+    id: id(),
+    tenantId: A.t.id,
+    name: 'Default',
+    appliesTo: 'COMPANY',
+    effectiveFrom: new Date('2026-01-01'),
+    createdBy: id(),
+  },
+});
+const ses = await db.workSession.create({
+  data: {
+    id: id(),
+    tenantId: A.t.id,
+    employeeId: A.emp.id,
+    workDate: new Date('2026-11-25'),
+    workLocationId: loc.id,
+    policyId: pol.id,
+    policyVersion: 1,
+    startedAt: new Date(),
+  },
+});
+await db.employeeActiveSession.create({
+  data: { tenantId: A.t.id, employeeId: A.emp.id, sessionId: ses.id, startedAt: new Date() },
+});
+await check(
+  'second active session for same employee blocked',
+  async () => {
+    const s2 = await db.workSession.create({
+      data: {
+        id: id(),
+        tenantId: A.t.id,
+        employeeId: A.emp.id,
+        workDate: new Date('2026-11-25'),
+        workLocationId: loc.id,
+        policyId: pol.id,
+        policyVersion: 1,
+        startedAt: new Date(),
+      },
+    });
+    await db.employeeActiveSession.create({
+      data: { tenantId: A.t.id, employeeId: A.emp.id, sessionId: s2.id, startedAt: new Date() },
+    });
+  },
+  /Unique constraint/i,
+);
+const ev = await db.workSessionEvent.create({
+  data: {
+    id: id(),
+    tenantId: A.t.id,
+    sessionId: ses.id,
+    type: 'START',
+    serverTs: new Date(),
+    source: 'WEB',
+    idempotencyKey: 'k1',
+  },
+});
+await check(
+  'duplicate session event (same idempotency key) blocked',
+  () =>
+    db.workSessionEvent.create({
+      data: {
+        id: id(),
+        tenantId: A.t.id,
+        sessionId: ses.id,
+        type: 'START',
+        serverTs: new Date(),
+        source: 'WEB',
+        idempotencyKey: 'k1',
+      },
+    }),
+  /Unique constraint/i,
+);
+await check(
+  'session event update blocked',
+  () => db.workSessionEvent.update({ where: { id: ev.id }, data: { type: 'END' } }),
+  /IMMUTABLE/,
+);
+
+console.table(results);
+await db.$disconnect();
+process.exit(results.some((r) => r[1] !== 'pass') ? 1 : 0);

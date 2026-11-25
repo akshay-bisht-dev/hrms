@@ -1,0 +1,208 @@
+// ── Recruitment ──
+
+model JobRequisition {
+  id             String            @id @db.Char(36)
+  tenantId       String            @map("tenant_id") @db.Char(36)
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  departmentId   String?           @map("department_id") @db.Char(36)
+  designationId  String?           @map("designation_id") @db.Char(36)
+  title          String            @db.VarChar(200)
+  headcount      Int               @default(1)
+  employmentType EmploymentType    @map("employment_type")
+  location       String?           @db.VarChar(150)
+  budgetCurrency String?           @map("budget_currency") @db.Char(3)
+  budgetMin      Decimal?          @map("budget_min") @db.Decimal(19, 4)
+  budgetMax      Decimal?          @map("budget_max") @db.Decimal(19, 4)
+  justification  String?           @db.Text
+  status         RequisitionStatus @default(DRAFT)
+  requestedBy    String            @map("requested_by") @db.Char(36)
+  createdAt      DateTime          @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime          @updatedAt @map("updated_at") @db.DateTime(3)
+  department     Department?       @relation(fields: [tenantId, departmentId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  designation    Designation?      @relation(fields: [tenantId, designationId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  jobPostings    JobPosting[]
+
+  @@unique([tenantId, id])
+  @@map("job_requisitions")
+}
+
+enum RequisitionStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  ON_HOLD
+  CLOSED
+}
+
+model JobPosting {
+  id              String           @id @db.Char(36)
+  tenantId        String           @map("tenant_id") @db.Char(36)
+  requisitionId   String           @map("requisition_id") @db.Char(36)
+  slug            String           @db.VarChar(120)
+  title           String           @db.VarChar(200)
+  description     String           @db.Text
+  location        String?          @db.VarChar(150)
+  workMode        WorkMode         @map("work_mode")
+  isPublic        Boolean          @default(true) @map("is_public")
+  status          PostingStatus    @default(DRAFT)
+  pipelineStages  Json             @map("pipeline_stages")
+  publishedAt     DateTime?        @map("published_at") @db.DateTime(3)
+  closesAt        DateTime?        @map("closes_at") @db.DateTime(3)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.DateTime(3)
+  requisition     JobRequisition   @relation(fields: [tenantId, requisitionId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  jobApplications JobApplication[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, slug])
+  @@map("job_postings")
+}
+
+enum PostingStatus {
+  DRAFT
+  PUBLISHED
+  PAUSED
+  CLOSED
+}
+
+model Candidate {
+  id                String           @id @db.Char(36)
+  tenantId          String           @map("tenant_id") @db.Char(36)
+  tenant            Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  firstName         String           @map("first_name") @db.VarChar(100)
+  lastName          String?          @map("last_name") @db.VarChar(100)
+  email             String           @db.VarChar(254)
+  phone             String?          @db.VarChar(32)
+  resumeKey         String?          @map("resume_key") @db.VarChar(500)
+  parsedProfile     Json?            @map("parsed_profile")
+  source            String           @db.VarChar(40)
+  consentTalentPool Boolean          @default(false) @map("consent_talent_pool")
+  retentionUntil    DateTime?        @map("retention_until") @db.Date
+  createdAt         DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt         DateTime         @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt         DateTime?        @map("deleted_at") @db.DateTime(3)
+  jobApplications   JobApplication[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, email])
+  @@map("candidates")
+}
+
+model JobApplication {
+  id             String            @id @db.Char(36)
+  tenantId       String            @map("tenant_id") @db.Char(36)
+  postingId      String            @map("posting_id") @db.Char(36)
+  candidateId    String            @map("candidate_id") @db.Char(36)
+  stage          String            @db.VarChar(40)
+  status         ApplicationStatus @default(ACTIVE)
+  appliedAt      DateTime          @map("applied_at") @db.DateTime(3)
+  rejectedReason String?           @map("rejected_reason") @db.VarChar(255)
+  createdAt      DateTime          @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime          @updatedAt @map("updated_at") @db.DateTime(3)
+  posting        JobPosting        @relation(fields: [tenantId, postingId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  candidate      Candidate         @relation(fields: [tenantId, candidateId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  interviews     Interview[]
+  offer          Offer?
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, postingId, candidateId])
+  @@map("job_applications")
+}
+
+enum ApplicationStatus {
+  ACTIVE
+  HIRED
+  REJECTED
+  WITHDRAWN
+}
+
+model Interview {
+  id                     String              @id @db.Char(36)
+  tenantId               String              @map("tenant_id") @db.Char(36)
+  applicationId          String              @map("application_id") @db.Char(36)
+  round                  Int
+  scheduledStart         DateTime            @map("scheduled_start") @db.DateTime(3)
+  scheduledEnd           DateTime            @map("scheduled_end") @db.DateTime(3)
+  mode                   InterviewMode
+  locationOrLink         String?             @map("location_or_link") @db.VarChar(500)
+  interviewerEmployeeIds Json                @map("interviewer_employee_ids")
+  status                 InterviewStatus     @default(SCHEDULED)
+  createdAt              DateTime            @default(now()) @map("created_at") @db.DateTime(3)
+  application            JobApplication      @relation(fields: [tenantId, applicationId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+  interviewFeedbacks     InterviewFeedback[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, scheduledStart])
+  @@map("interviews")
+}
+
+enum InterviewMode {
+  ONSITE
+  VIDEO
+  PHONE
+}
+
+enum InterviewStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model InterviewFeedback {
+  id                    String         @id @db.Char(36)
+  tenantId              String         @map("tenant_id") @db.Char(36)
+  interviewId           String         @map("interview_id") @db.Char(36)
+  interviewerEmployeeId String         @map("interviewer_employee_id") @db.Char(36)
+  rating                Int?
+  recommendation        Recommendation
+  scorecard             Json
+  notes                 String?        @db.Text
+  submittedAt           DateTime       @map("submitted_at") @db.DateTime(3)
+  interview             Interview      @relation(fields: [tenantId, interviewId], references: [tenantId, id], onDelete: Cascade, onUpdate: Restrict)
+  interviewer           Employee       @relation(fields: [tenantId, interviewerEmployeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([tenantId, interviewId, interviewerEmployeeId])
+  @@map("interview_feedbacks")
+}
+
+enum Recommendation {
+  STRONG_YES
+  YES
+  NO
+  STRONG_NO
+}
+
+model Offer {
+  id              String           @id @db.Char(36)
+  tenantId        String           @map("tenant_id") @db.Char(36)
+  applicationId   String           @map("application_id") @db.Char(36)
+  currency        String           @db.Char(3)
+  annualCtc       Decimal          @map("annual_ctc") @db.Decimal(19, 4)
+  joiningDate     DateTime?        @map("joining_date") @db.Date
+  letterKey       String?          @map("letter_key") @db.VarChar(500)
+  status          OfferStatus      @default(DRAFT)
+  sentAt          DateTime?        @map("sent_at") @db.DateTime(3)
+  respondedAt     DateTime?        @map("responded_at") @db.DateTime(3)
+  expiresAt       DateTime?        @map("expires_at") @db.DateTime(3)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.DateTime(3)
+  application     JobApplication   @relation(fields: [tenantId, applicationId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  onboardingCases OnboardingCase[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, applicationId])
+  @@map("offers")
+}
+
+enum OfferStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  SENT
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  WITHDRAWN
+}

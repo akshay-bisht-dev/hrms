@@ -1,0 +1,28 @@
+{
+  "name": "@hrms/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --env-file-if-exists=../../.env --watch src/worker.js",
+    "start": "node src/worker.js",
+    "scheduler": "node --env-file-if-exists=../../.env src/scheduler.js",
+    "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --testPathIgnorePatterns=integration",
+    "test:integration": "node --env-file-if-exists=../../.env --experimental-vm-modules ../../node_modules/jest/bin/jest.js --testPathPatterns=integration --runInBand"
+  },
+  "dependencies": {
+    "@hrms/backend": "0.1.0",
+    "@hrms/shared": "0.1.0",
+    "bullmq": "^6.7.10",
+    "ioredis": "^6.1.0",
+    "nodemailer": "^10.6.1",
+    "zod": "^4.6.7"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {},
+    "testMatch": [
+      "**/test/**/*.test.js"
+    ]
+  }
+}
