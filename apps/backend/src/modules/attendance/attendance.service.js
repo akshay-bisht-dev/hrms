@@ -303,7 +303,7 @@ export function createAttendanceService({ queues, now = () => new Date() } = {})
     if (myId && (managerId === myId || approverEmployeeId === myId)) return true;
     if (!ctx().permissions?.has('attendance.regularization.approve')) return false;
     const scope = await employeeScope('attendance.regularization.approve');
-    return (await db().employee.count({ where: { id: employeeId, ...scope } })) > 0;
+    return (await db().employee.count({ where: { AND: [{ id: employeeId, deletedAt: null }, scope] } })) > 0;
   }
 
   /** Employee filter for approval lists: direct reports plus the permission's scope, never yourself. */
@@ -322,7 +322,7 @@ export function createAttendanceService({ queues, now = () => new Date() } = {})
   async function viewableEmployeeOr404(employeeId) {
     const scope = await employeeScope('attendance.view', { includeSelf: true });
     const emp = await db().employee.findFirst({
-      where: { id: employeeId, ...scope },
+      where: { AND: [{ id: employeeId, deletedAt: null }, scope] },
       select: EMPLOYEE_SELECT,
     });
     if (!emp) throw new NotFoundError();
@@ -492,9 +492,8 @@ export function createAttendanceService({ queues, now = () => new Date() } = {})
       const scope = await employeeScope('attendance.view', { includeSelf: true });
       const date = ymdToDate(q.date);
       const base = {
-        ...scope,
+        AND: [scope, { deletedAt: null }, { OR: [{ exitDate: null }, { exitDate: { gte: date } }] }],
         dateOfJoining: { lte: date },
-        AND: [{ OR: [{ exitDate: null }, { exitDate: { gte: date } }] }],
         ...(q.departmentId ? { departmentId: q.departmentId } : {}),
       };
       const statusFilter =
@@ -892,7 +891,7 @@ export function createAttendanceService({ queues, now = () => new Date() } = {})
       const scope = await employeeScope('attendance.manage');
       const ids = [...new Set(input.employeeIds)];
       const found = await db().employee.findMany({
-        where: { id: { in: ids }, ...scope },
+        where: { AND: [{ id: { in: ids }, deletedAt: null }, scope] },
         select: { id: true },
       });
       if (found.length !== ids.length)
@@ -1046,9 +1045,8 @@ export function createAttendanceService({ queues, now = () => new Date() } = {})
       const range = { gte: ymdToDate(q.from), lte: ymdToDate(q.to) };
       const employees = await db().employee.findMany({
         where: {
-          ...scope,
+          AND: [scope, { deletedAt: null }, { OR: [{ exitDate: null }, { exitDate: { gte: range.gte } }] }],
           dateOfJoining: { lte: range.lte },
-          AND: [{ OR: [{ exitDate: null }, { exitDate: { gte: range.gte } }] }],
           ...(q.departmentId ? { departmentId: q.departmentId } : {}),
         },
         select: EMPLOYEE_SELECT,
