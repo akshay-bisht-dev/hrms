@@ -182,6 +182,9 @@ model EmployeeDocument {
   deletedAt  DateTime?      @map("deleted_at") @db.DateTime(3)
   employee   Employee       @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
 
+  leaveRequests LeaveRequest[]
+
+  @@unique([tenantId, id])
   @@index([tenantId, employeeId])
   @@map("employee_documents")
 }
