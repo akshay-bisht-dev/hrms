@@ -1,6 +1,6 @@
 # Sprint 5 — Attendance, shifts, overtime and corrections
 
-Status: **Complete, awaiting owner approval** · Date: 2026-11-25 · Branch: `sprint-05/attendance`
+Status: **Approved** · Date: 2026-11-25 · Branch: `sprint-05/attendance`
 
 ## 1. Objectives
 People clock in and out on the web and can see exactly what is recorded about them. Each day is worked out the same way everywhere: present, half day, absent, late, early leave, overtime, weekends and holidays, in the employee's own time zone. Mistakes are fixed through corrections that a manager approves, and the original clock events are never changed. HR configures shifts, overtime rules and thresholds per legal entity, and reports on the result.
@@ -129,4 +129,5 @@ README (worker schedules, attendance troubleshooting), `.env.example` (`WORKER_W
 5. Reports: pick a period, then Download CSV.
 
 ## 12. Approval
-Pending.
+
+Approved by the owner on 2026-11-25; merged to `main` through a pull request after CI passed.
