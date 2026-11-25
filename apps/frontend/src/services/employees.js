@@ -43,7 +43,10 @@ export async function uploadDocument(employeeId, file, category) {
     json: { category, fileName: file.name, mimeType: file.type, sizeBytes: file.size },
   });
   await putToStorage(start, file);
-  return apiFetch(`${base}/${employeeId}/documents/${start.documentId}/complete`, { method: 'POST' });
+  const done = await apiFetch(`${base}/${employeeId}/documents/${start.documentId}/complete`, {
+    method: 'POST',
+  });
+  return { ...done, id: start.documentId };
 }
 
 /** Import: upload the CSV, then start the job. */
