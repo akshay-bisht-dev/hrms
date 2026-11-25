@@ -4,7 +4,7 @@ Multi-tenant HRMS and remote workforce management SaaS for small and medium comp
 **JavaScript only:** React + Vite, Node.js + Express, Prisma + MySQL 8.4, Redis + BullMQ, and later an Electron desktop agent.
 
 - Planning and design: [`docs/`](docs) (Phases 1–5) · Sprint records: [`docs/sprints/`](docs/sprints)
-- Status: **Sprint 4 (Employee management)** complete. Sprint records: [`docs/sprints/`](docs/sprints).
+- Status: **Sprint 5 (Attendance, shifts, overtime and corrections)** complete. Sprint records: [`docs/sprints/`](docs/sprints).
 
 ## Repository layout
 
@@ -84,7 +84,7 @@ Start the background worker in a second terminal:
 npm run dev:worker
 ```
 
-Register the repeatable jobs (run once, or again after adding schedules):
+Register the repeatable jobs (run once, or again after adding schedules). They include the attendance roll-up (every 30 minutes) and applying future-dated job changes (hourly):
 
 ```bash
 npm run scheduler -w apps/worker
@@ -168,15 +168,17 @@ docker build --secret id=extra_ca,src=/path/to/proxy-ca.pem -f infrastructure/do
 
 ## Troubleshooting
 
-| Symptom                                                        | Cause and fix                                                                                                                                                                                                                                                |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `Invalid environment configuration: DATABASE_URL …` at startup | `.env` missing or incomplete. Run `cp .env.example .env`. `npm start` deliberately ignores `.env`; use the `dev` scripts locally.                                                                                                                            |
-| Migration fails with database error **1419**                   | MySQL has binary logging on, and the app user can't create triggers without `log_bin_trust_function_creators=1`. The compose file sets it. For other servers, run `SET GLOBAL log_bin_trust_function_creators = 1;` as root, or use the RDS parameter group. |
-| `P3018 A migration failed to apply` after a failed run         | Local only: `docker compose down -v` removes the database volume, then migrate again. Never do this in production; use `prisma migrate resolve`.                                                                                                             |
-| `/health/ready` returns 503                                    | The body says which dependency is down. Check `docker compose ps`.                                                                                                                                                                                           |
-| Port 3306/6379/5173 already in use                             | Stop the other service, or change the published port in `docker-compose.yml` and the matching URL in `.env`.                                                                                                                                                 |
-| Frontend shows "Couldn't reach the API"                        | Start the API (`npm run dev:backend`). Vite proxies `/api` and `/health` to port 3000.                                                                                                                                                                       |
-| `SELF_SIGNED_CERT_IN_CHAIN` during `docker build`              | A TLS-inspecting proxy. Pass its CA as `--secret id=extra_ca,src=…` (see above).                                                                                                                                                                             |
-| `Invalid environment configuration: JWT_ACCESS_PRIVATE_KEY …`  | Run `npm run keys:dev -w apps/backend` once.                                                                                                                                                                                                                 |
-| E2E or manual sign-ins get "Too many attempts"                 | Per-IP and per-account limits work as designed. Locally, `docker compose exec redis redis-cli --scan --pattern 'rl:*' \| xargs docker compose exec -T redis redis-cli del`, or wait for the window to pass. `npm run test:e2e` clears them itself.           |
-| Jest says "did not exit one second after the test run"         | A test left a Redis or DB connection open. BullMQ does not close connections it is given; close them in `afterAll`.                                                                                                                                          |
+| Symptom                                                          | Cause and fix                                                                                                                                                                                                                                                |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Invalid environment configuration: DATABASE_URL …` at startup   | `.env` missing or incomplete. Run `cp .env.example .env`. `npm start` deliberately ignores `.env`; use the `dev` scripts locally.                                                                                                                            |
+| Migration fails with database error **1419**                     | MySQL has binary logging on, and the app user can't create triggers without `log_bin_trust_function_creators=1`. The compose file sets it. For other servers, run `SET GLOBAL log_bin_trust_function_creators = 1;` as root, or use the RDS parameter group. |
+| `P3018 A migration failed to apply` after a failed run           | Local only: `docker compose down -v` removes the database volume, then migrate again. Never do this in production; use `prisma migrate resolve`.                                                                                                             |
+| `/health/ready` returns 503                                      | The body says which dependency is down. Check `docker compose ps`.                                                                                                                                                                                           |
+| Port 3306/6379/5173 already in use                               | Stop the other service, or change the published port in `docker-compose.yml` and the matching URL in `.env`.                                                                                                                                                 |
+| Frontend shows "Couldn't reach the API"                          | Start the API (`npm run dev:backend`). Vite proxies `/api` and `/health` to port 3000.                                                                                                                                                                       |
+| `SELF_SIGNED_CERT_IN_CHAIN` during `docker build`                | A TLS-inspecting proxy. Pass its CA as `--secret id=extra_ca,src=…` (see above).                                                                                                                                                                             |
+| `Invalid environment configuration: JWT_ACCESS_PRIVATE_KEY …`    | Run `npm run keys:dev -w apps/backend` once.                                                                                                                                                                                                                 |
+| E2E or manual sign-ins get "Too many attempts"                   | Per-IP and per-account limits work as designed. Locally, `docker compose exec redis redis-cli --scan --pattern 'rl:*' \| xargs docker compose exec -T redis redis-cli del`, or wait for the window to pass. `npm run test:e2e` clears them itself.           |
+| Past days show "Not recorded" in Team attendance                 | Day rows for people who didn't clock in are created by the roll-up job. Start the worker and run `npm run scheduler -w apps/worker` once. After changing shifts or rules, use Settings → Attendance → Recalculate.                                           |
+| Clock-in says "Your sign-in is not linked to an employee record" | Link the account in Settings → Members, or invite the person from their employee profile (_Invite to sign in_).                                                                                                                                              |
+| Jest says "did not exit one second after the test run"           | A test left a Redis or DB connection open. BullMQ does not close connections it is given; close them in `afterAll`.                                                                                                                                          |

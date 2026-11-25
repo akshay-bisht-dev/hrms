@@ -36,6 +36,8 @@ export function createApp({ env, logger, readinessChecks, services }) {
     }),
   );
 
+  // Routers register their OpenAPI paths when they are built, so build them before the document.
+  const api = apiRouter(services);
   const docsEnabled = env.ENABLE_API_DOCS ?? env.NODE_ENV !== 'production';
   if (docsEnabled) {
     const document = buildOpenApiDocument();
@@ -91,7 +93,7 @@ export function createApp({ env, logger, readinessChecks, services }) {
       onFailure: (name, err) => logger.warn({ err, check: name }, 'Readiness check failed'),
     }),
   );
-  app.use('/api/v1', apiRouter(services));
+  app.use('/api/v1', api);
 
   app.use(notFound);
   app.use(errorHandler(logger));

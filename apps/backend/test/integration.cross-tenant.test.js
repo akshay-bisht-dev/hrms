@@ -4,6 +4,7 @@
 // A new route with an id parameter and no fixture below makes this suite fail, so coverage cannot silently drop.
 import { apiRouter } from '../src/routes/index.js';
 import { listRoutes } from '../src/lib/route-registry.js';
+import request from 'supertest';
 import { startHarness } from './helpers/harness.js';
 
 let h;
@@ -384,4 +385,15 @@ test("tenant A's data is unchanged after all of that", async () => {
   ).toBe('PENDING');
   expect((await A.call('get', '/attendance/shift-assignments').expect(200)).body.data).toHaveLength(1);
   expect((await A.call('get', '/attendance/me/status').expect(200)).body.clockedIn).toBe(true);
+});
+
+test('every registered route is in the API docs', async () => {
+  const doc = (await request(h.app).get('/api/docs/openapi.json').expect(200)).body;
+  const documented = new Set(
+    Object.entries(doc.paths).flatMap(([p, ops]) => Object.keys(ops).map((m) => `${m.toUpperCase()} ${p}`)),
+  );
+  const missing = listRoutes(apiRouter(h.services.routes))
+    .map((r) => `${r.method} /api/v1${r.path.replace(/:(\w+)/g, '{$1}')}`.replace(/\/$/, ''))
+    .filter((k) => !documented.has(k));
+  expect(missing).toEqual([]);
 });
