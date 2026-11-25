@@ -18,8 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -54,15 +54,23 @@ jobs:
         ports: ['6379:6379']
         options: --health-cmd="redis-cli ping" --health-interval=5s --health-timeout=3s --health-retries=20
     env:
-      DATABASE_URL: mysql://hrms:hrms_ci_password@127.0.0.1:3306/hrms_test
+      DATABASE_URL: mysql://hrms:hrms_ci_password@127.0.0.1:3306/hrms_test?allowPublicKeyRetrieval=true
       REDIS_URL: redis://127.0.0.1:6379
+      S3_ENDPOINT: http://127.0.0.1:9000
+      S3_ACCESS_KEY_ID: local_dev_access_key
+      S3_SECRET_ACCESS_KEY: local_dev_secret_key
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - name: Start S3-compatible storage (SeaweedFS needs a command, which service containers cannot pass)
+        run: |
+          docker run -d --name s3 -p 9000:9000 -v "$PWD/infrastructure/docker/seaweedfs-s3.json:/etc/seaweedfs/s3.json:ro" \
+            chrislusf/seaweedfs:4.55 server -dir=/data -s3 -s3.port=9000 -s3.config=/etc/seaweedfs/s3.json
+          for i in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:9000 && break; sleep 2; done
       - name: Allow the app user to create triggers (service containers cannot take server flags)
         run: mysql -h 127.0.0.1 -uroot -proot_ci_password -e "SET GLOBAL log_bin_trust_function_creators = 1;"
       - run: npm run db:migrate
@@ -79,7 +87,7 @@ jobs:
     timeout-minutes: 20
     needs: checks
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: docker/setup-buildx-action@v3
       - run: docker build -f infrastructure/docker/backend.Dockerfile -t hrms-backend:ci .
       - run: docker build -f infrastructure/docker/worker.Dockerfile -t hrms-worker:ci .

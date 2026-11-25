@@ -14,7 +14,10 @@
     "organization": "Organization",
     "members": "Members",
     "roles": "Roles",
-    "switchCompany": "Switch company"
+    "switchCompany": "Switch company",
+    "people": "People",
+    "employees": "Employees",
+    "myProfile": "My profile"
   },
   "status": {
     "title": "System status",
@@ -333,5 +336,185 @@
     "done": "You've joined {{company}}. Sign in to continue.",
     "invalid": "This invitation is invalid or has expired. Ask your administrator for a new one.",
     "signIn": "Sign in"
+  },
+  "employees": {
+    "title": "Employees",
+    "subtitle": "Everyone you're allowed to see, with their team and role.",
+    "add": "Add employee",
+    "import": "Import CSV",
+    "export": "Export CSV",
+    "search": "Search by name, code or email",
+    "allDepartments": "All departments",
+    "allStatuses": "All statuses",
+    "showExited": "Show people who left",
+    "empty": "No employees yet. Add your first one, or import a CSV.",
+    "noMatches": "No one matches these filters.",
+    "loadMore": "Load more",
+    "col": {
+      "name": "Name",
+      "code": "Code",
+      "department": "Department",
+      "designation": "Designation",
+      "manager": "Manager",
+      "status": "Status",
+      "joined": "Joined"
+    },
+    "status": {
+      "PREBOARDING": "Pre-boarding",
+      "PROBATION": "Probation",
+      "ACTIVE": "Active",
+      "NOTICE": "Notice",
+      "EXITED": "Left"
+    },
+    "workMode": {
+      "OFFICE": "Office",
+      "REMOTE": "Remote",
+      "HYBRID": "Hybrid"
+    },
+    "employmentType": {
+      "FULL_TIME": "Full-time",
+      "PART_TIME": "Part-time",
+      "CONTRACT": "Contract",
+      "INTERN": "Intern"
+    },
+    "f": {
+      "firstName": "First name",
+      "lastName": "Last name",
+      "preferredName": "Preferred name",
+      "workEmail": "Work email",
+      "personalEmail": "Personal email",
+      "phone": "Phone",
+      "dateOfBirth": "Date of birth",
+      "gender": "Gender",
+      "code": "Employee code",
+      "codeHint": "Leave empty to generate one (E00001, E00002 …).",
+      "joining": "Joining date",
+      "probation": "Probation ends",
+      "legalEntity": "Legal entity",
+      "department": "Department",
+      "designation": "Designation",
+      "branch": "Branch",
+      "manager": "Manager",
+      "workMode": "Work mode",
+      "employmentType": "Employment type",
+      "nationalIdType": "ID type",
+      "nationalId": "ID number",
+      "timezone": "Time zone"
+    },
+    "create": "Create employee",
+    "created": "Employee created.",
+    "cancel": "Cancel",
+    "tabs": {
+      "profile": "Profile",
+      "job": "Job & history",
+      "contacts": "Emergency contacts",
+      "documents": "Documents",
+      "bank": "Bank details"
+    },
+    "profile": {
+      "save": "Save changes",
+      "saved": "Saved.",
+      "selfNote": "You can change your preferred name, personal email and phone. Ask HR to change anything else.",
+      "reveal": "Show full ID",
+      "nationalIdNone": "Not recorded",
+      "signIn": "Sign-in",
+      "notLinked": "No sign-in account linked",
+      "linked": "{{email}} · {{status}}",
+      "invite": "Invite to sign in",
+      "inviteRole": "Role",
+      "inviteEmail": "Email for sign-in",
+      "inviteSend": "Send invitation",
+      "inviteSent": "Invitation sent to {{email}}."
+    },
+    "job": {
+      "current": "Current",
+      "history": "History",
+      "change": "Record a change",
+      "reason": "Reason",
+      "effective": "Effective from",
+      "save": "Save change",
+      "saved": "Change recorded.",
+      "reasons": {
+        "JOINING": "Joined",
+        "TRANSFER": "Transfer",
+        "PROMOTION": "Promotion",
+        "MANAGER_CHANGE": "Manager change",
+        "REORGANIZATION": "Reorganization",
+        "CORRECTION": "Correction"
+      },
+      "statusTitle": "Change status",
+      "newStatus": "New status",
+      "statusReason": "Reason",
+      "statusSave": "Change status",
+      "to": "to",
+      "noManager": "— No manager —",
+      "noChange": "— Keep current —"
+    },
+    "contacts": {
+      "name": "Name",
+      "relationship": "Relationship",
+      "phone": "Phone",
+      "email": "Email",
+      "add": "Add contact",
+      "empty": "No emergency contacts yet.",
+      "remove": "Remove"
+    },
+    "documents": {
+      "category": "Category",
+      "file": "File (PDF, PNG, JPG or DOCX, up to 10 MB)",
+      "upload": "Upload",
+      "uploading": "Uploading…",
+      "empty": "No documents yet.",
+      "download": "Download",
+      "verify": "Mark verified",
+      "verified": "Verified",
+      "delete": "Delete",
+      "scan": {
+        "PENDING": "Checking",
+        "CLEAN": "Ready",
+        "FAILED": "Rejected",
+        "INFECTED": "Rejected"
+      },
+      "categories": {
+        "ID_PROOF": "ID proof",
+        "ADDRESS_PROOF": "Address proof",
+        "EDUCATION": "Education",
+        "EMPLOYMENT": "Previous employment",
+        "CONTRACT": "Contract",
+        "TAX": "Tax",
+        "MEDICAL": "Medical",
+        "OTHER": "Other"
+      }
+    },
+    "bank": {
+      "holder": "Account holder",
+      "number": "Account number or IBAN",
+      "currency": "Currency",
+      "from": "Effective from",
+      "codeLabel": "Bank code (IFSC, sort code, routing or SWIFT)",
+      "add": "Add bank account",
+      "empty": "No bank details on file.",
+      "current": "Current",
+      "until": "until {{date}}",
+      "note": "Only the last 4 digits are ever shown."
+    },
+    "importPage": {
+      "title": "Import employees",
+      "subtitle": "Upload a CSV with one person per row. Codes must be unique; rows with an existing code are skipped, so re-running a file is safe.",
+      "template": "Download template",
+      "choose": "CSV file (up to 2 MB)",
+      "start": "Upload and import",
+      "running": "Importing…",
+      "result": "Download row-by-row result",
+      "recent": "Recent imports",
+      "status": {
+        "QUEUED": "Queued",
+        "RUNNING": "Running",
+        "SUCCEEDED": "Done",
+        "PARTIAL": "Done with errors",
+        "FAILED": "Failed"
+      },
+      "counts": "{{ok}} imported or skipped · {{failed}} with errors · {{total}} rows"
+    }
   }
 }

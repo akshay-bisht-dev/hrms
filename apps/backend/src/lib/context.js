@@ -7,6 +7,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
  * @property {string} [tenantId]
  * @property {string} [userId]
  * @property {string} [membershipId]
+ * @property {string | null} [employeeId] the signed-in person's employee record in this company, if linked
  * @property {string} [deviceId]
  * @property {Map<string, string>} [permissions] permission code → data scope
  */

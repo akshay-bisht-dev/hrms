@@ -15,25 +15,47 @@ export async function startHarness() {
   const DATABASE_URL = process.env.DATABASE_URL;
   if (!DATABASE_URL) throw new Error('DATABASE_URL is required for integration tests');
   const REDIS_TEST_URL = `${(process.env.REDIS_URL ?? 'redis://127.0.0.1:6379').replace(/\/\d+$/, '')}/1`;
-  const env = testEnv({ DATABASE_URL, REDIS_URL: REDIS_TEST_URL, FRONTEND_URL: ORIGIN });
+  const env = testEnv({
+    DATABASE_URL,
+    REDIS_URL: REDIS_TEST_URL,
+    FRONTEND_URL: ORIGIN,
+    S3_ENDPOINT: process.env.S3_ENDPOINT ?? 'http://127.0.0.1:9000',
+    S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID ?? 'local_dev_access_key',
+    S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY ?? 'local_dev_secret_key',
+    S3_BUCKET_DOCUMENTS: 'hrms-test-documents',
+    S3_BUCKET_REPORTS: 'hrms-test-reports',
+  });
   initDb(DATABASE_URL);
   const redis = new Redis(REDIS_TEST_URL);
   await redis.flushdb();
+  const jobs = { files: [], imports: [] };
+  // Fakes that record jobs and enforce BullMQ's rule that custom job ids may not contain ':'.
+  const fakeQueue = (record) => ({
+    add: async (name, data, opts = {}) => {
+      if (opts.jobId && String(opts.jobId).includes(':')) throw new Error('Custom Id cannot contain :');
+      record(name, data);
+    },
+  });
   const emails = [];
-  const queues = { notifications: { add: async (_name, job) => emails.push(job) } };
+  const queues = {
+    notifications: fakeQueue((_name, data) => emails.push(data)),
+    files: fakeQueue((name, data) => jobs.files.push({ name, data })),
+    imports: fakeQueue((name, data) => jobs.imports.push({ name, data })),
+  };
   const services = buildServices({
     env,
-    logger: createLogger({ level: 'silent' }),
+    logger: createLogger({ level: process.env.TEST_LOG_LEVEL ?? 'silent' }),
     redis,
     queues,
     breachCheck: async () => false,
   });
   const app = createApp({
     env,
-    logger: createLogger({ level: 'silent' }),
+    logger: createLogger({ level: process.env.TEST_LOG_LEVEL ?? 'silent' }),
     readinessChecks: [],
     services: services.routes,
   });
+  await services.files.ensureBuckets([env.S3_BUCKET_DOCUMENTS, env.S3_BUCKET_REPORTS]);
   let ip = 1;
 
   const h = {
@@ -41,6 +63,7 @@ export async function startHarness() {
     env,
     redis,
     emails,
+    jobs,
     services,
     db: platformDb,
     async stop() {

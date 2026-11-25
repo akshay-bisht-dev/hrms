@@ -1,6 +1,16 @@
 import { Link, NavLink, Outlet } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { Activity, Building2, KeyRound, LogOut, Network, Shield, Users } from 'lucide-react';
+import {
+  Activity,
+  Building2,
+  Contact,
+  KeyRound,
+  LogOut,
+  Network,
+  Shield,
+  UserRound,
+  Users,
+} from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
@@ -69,6 +79,17 @@ export function AppShell() {
         <NavLink to="/" end className={link}>
           <Activity aria-hidden="true" className="size-4" />
           {t('nav.systemStatus')}
+        </NavLink>
+        <span className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-text-muted">
+          {t('nav.people')}
+        </span>
+        <NavLink to="/me" className={link}>
+          <UserRound aria-hidden="true" className="size-4" />
+          {t('nav.myProfile')}
+        </NavLink>
+        <NavLink to="/employees" className={link}>
+          <Contact aria-hidden="true" className="size-4" />
+          {t('nav.employees')}
         </NavLink>
         <span className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-text-muted">
           {t('nav.settings')}

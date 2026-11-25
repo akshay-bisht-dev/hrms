@@ -54,6 +54,16 @@ export const EnvSchema = z
     /** Per-IP limit on sign-in endpoints. Offices share one IP, so per-account lockout is the main brute-force control. */
     AUTH_IP_LIMIT_PER_MIN: z.coerce.number().int().min(5).max(10000).default(60),
     /** Per-IP limit on endpoints that send email (register, forgot password, resend). */
+    // ── Sprint 4: object storage (S3; SeaweedFS locally) ──
+    AWS_REGION: z.string().min(1).default('ap-south-1'),
+    /** Only for S3-compatible stores (local SeaweedFS). Empty in AWS. */
+    S3_ENDPOINT: z.url().optional(),
+    /** Explicit keys for the local S3-compatible store, so ambient AWS credentials are never used against it. */
+    S3_ACCESS_KEY_ID: z.string().optional(),
+    S3_SECRET_ACCESS_KEY: z.string().optional(),
+    S3_BUCKET_DOCUMENTS: z.string().min(3).default('hrms-documents'),
+    S3_BUCKET_REPORTS: z.string().min(3).default('hrms-reports'),
+    S3_BUCKET_SCREENSHOTS: z.string().min(3).default('hrms-screenshots'),
     AUTH_EMAIL_IP_LIMIT_PER_HOUR: z.coerce.number().int().min(3).max(10000).default(30),
   })
   .superRefine((e, ctx) => {

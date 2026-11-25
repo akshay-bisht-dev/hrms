@@ -70,7 +70,7 @@ services:
     command: ['sh', '-c', 'npx prisma migrate deploy && node prisma/seed.mjs']
     environment: &app-env
       NODE_ENV: production
-      DATABASE_URL: mysql://hrms:hrms_dev_password@mysql:3306/hrms?connectionLimit=10
+      DATABASE_URL: mysql://hrms:hrms_dev_password@mysql:3306/hrms?connectionLimit=10&allowPublicKeyRetrieval=true
       REDIS_URL: redis://redis:6379
       FRONTEND_URL: http://localhost:8080
       ENABLE_API_DOCS: 'true'

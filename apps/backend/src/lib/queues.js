@@ -16,10 +16,20 @@ export function createQueues(connection) {
       removeOnFail: { age: 24 * 3600 },
     },
   });
+  const files = new Queue(QUEUES.FILES, {
+    connection,
+    defaultJobOptions: { ...DEFAULT_JOB_OPTIONS, attempts: 5 },
+  });
+  const imports = new Queue(QUEUES.IMPORTS, {
+    connection,
+    defaultJobOptions: { ...DEFAULT_JOB_OPTIONS, attempts: 2 },
+  });
   return {
     notifications,
+    files,
+    imports,
     async close() {
-      await notifications.close();
+      await Promise.all([notifications.close(), files.close(), imports.close()]);
     },
   };
 }

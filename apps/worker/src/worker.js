@@ -7,6 +7,13 @@ import { loadWorkerConfig } from './config.js';
 import nodemailer from 'nodemailer';
 import { createSystemProcessor } from './processors/system.js';
 import { createNotificationsProcessor } from './processors/notifications.js';
+import { createFilesProcessor, createImportsProcessor } from './processors/tenant-jobs.js';
+import { initDb, closeDb } from '@hrms/backend/lib/db.js';
+import { createS3, storage } from '@hrms/backend/lib/storage.js';
+import { createCipher } from '@hrms/backend/lib/crypto.js';
+import { createEmployeesService } from '@hrms/backend/modules/employees/employees.service.js';
+import { createImportsService } from '@hrms/backend/modules/employees/imports.js';
+import { blindIndexKeyFrom } from '@hrms/backend/services.js';
 
 const config = loadWorkerConfig(process.env);
 const logger = createLogger({ level: config.LOG_LEVEL, name: 'hrms-worker' });
@@ -33,7 +40,30 @@ const guarded = (fn) => async (/** @type {import('bullmq').Job} */ job) => {
 // Production uses Amazon SES through its SMTP interface (SMTP_URL from Secrets Manager); locally Mailpit.
 const transport = nodemailer.createTransport(config.SMTP_URL);
 
+initDb(config.DATABASE_URL);
+const files = storage(createS3(config));
+const buckets = { documents: config.S3_BUCKET_DOCUMENTS, reports: config.S3_BUCKET_REPORTS };
+const employees = createEmployeesService({
+  files,
+  buckets,
+  ...(config.DATA_ENCRYPTION_KEY
+    ? {
+        cipher: createCipher(Buffer.from(config.DATA_ENCRYPTION_KEY, 'base64')),
+        blindIndexKey: blindIndexKeyFrom({ DATA_ENCRYPTION_KEY: config.DATA_ENCRYPTION_KEY }),
+      }
+    : {}),
+});
+const imports = createImportsService({ employees, files, buckets });
+
 const workers = [
+  new Worker(QUEUES.FILES, guarded(createFilesProcessor({ files, bucket: buckets.documents, logger })), {
+    connection,
+    concurrency: config.WORKER_FILES_CONCURRENCY,
+  }),
+  new Worker(QUEUES.IMPORTS, guarded(createImportsProcessor({ imports, logger })), {
+    connection,
+    concurrency: config.WORKER_IMPORTS_CONCURRENCY,
+  }),
   new Worker(
     QUEUES.NOTIFICATIONS,
     guarded(createNotificationsProcessor({ transport, from: config.EMAIL_FROM, logger })),
@@ -69,6 +99,7 @@ async function shutdown(signal) {
   force.unref();
   await Promise.allSettled(workers.map((w) => w.close()));
   await connection.quit().catch(() => {});
+  await closeDb().catch(() => {});
   logger.info('Worker stopped');
   process.exit(0);
 }

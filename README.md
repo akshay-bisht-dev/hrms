@@ -4,7 +4,7 @@ Multi-tenant HRMS and remote workforce management SaaS for small and medium comp
 **JavaScript only:** React + Vite, Node.js + Express, Prisma + MySQL 8.4, Redis + BullMQ, and later an Electron desktop agent.
 
 - Planning and design: [`docs/`](docs) (Phases 1–5) · Sprint records: [`docs/sprints/`](docs/sprints)
-- Status: **Sprint 3 (Multi-tenancy & company setup)** complete. Sprint records: [`docs/sprints/`](docs/sprints).
+- Status: **Sprint 4 (Employee management)** complete. Sprint records: [`docs/sprints/`](docs/sprints).
 
 ## Repository layout
 
@@ -52,6 +52,12 @@ Start MySQL 8.4, Redis 7, S3-compatible storage (SeaweedFS) and Mailpit:
 
 ```bash
 docker compose up -d
+```
+
+Create the local storage buckets (SeaweedFS stands in for S3):
+
+```bash
+npm run storage:init -w apps/backend
 ```
 
 Apply database migrations:
@@ -115,17 +121,17 @@ npm test
 Integration tests run against a disposable database (`hrms_test`, created by the local MySQL init script) and Redis. Migrate it once:
 
 ```bash
-DATABASE_URL='mysql://hrms:hrms_dev_password@127.0.0.1:3306/hrms_test' npm run db:migrate
+DATABASE_URL='mysql://hrms:hrms_dev_password@127.0.0.1:3306/hrms_test?allowPublicKeyRetrieval=true' npm run db:migrate
 ```
 
 Then run the database invariant checks and the integration tests:
 
 ```bash
-DATABASE_URL='mysql://hrms:hrms_dev_password@127.0.0.1:3306/hrms_test' npm run db:check -w apps/backend
+DATABASE_URL='mysql://hrms:hrms_dev_password@127.0.0.1:3306/hrms_test?allowPublicKeyRetrieval=true' npm run db:check -w apps/backend
 ```
 
 ```bash
-DATABASE_URL='mysql://hrms:hrms_dev_password@127.0.0.1:3306/hrms_test' npm run test:integration
+DATABASE_URL='mysql://hrms:hrms_dev_password@127.0.0.1:3306/hrms_test?allowPublicKeyRetrieval=true' npm run test:integration
 ```
 
 End-to-end tests in a real browser (needs the API, worker and frontend running, plus Mailpit from Docker Compose):

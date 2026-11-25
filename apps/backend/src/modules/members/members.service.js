@@ -19,9 +19,10 @@ const ctx = () => currentContext();
  * session; the last active Company Admin can't be demoted, suspended or removed; every change is audited and
  * sensitive grants are emailed to all Company Admins.
  * @param {{ env: Readonly<import('../../config/env.js').Env>, auth: ReturnType<typeof import('../auth/auth.service.js').createAuthService>,
- *           redis: import('ioredis').Redis, queues: { notifications: import('bullmq').Queue } }} deps
+ *           redis: import('ioredis').Redis, queues: { notifications: import('bullmq').Queue },
+ *           employees?: { linkMember: (membershipId: string, employeeId: string | null) => Promise<void> } }} deps
  */
-export function createMembersService({ env, auth, redis, queues }) {
+export function createMembersService({ env, auth, redis, queues, employees }) {
   const mailAdmins = async (template, data) => {
     const admins = await db().tenantMembership.findMany({
       where: { status: 'ACTIVE', membershipRoles: { some: { role: { systemKey: COMPANY_ADMIN } } } },
@@ -130,8 +131,8 @@ export function createMembersService({ env, auth, redis, queues }) {
       return rows.map((m) => memberDto(m, mfaUsers));
     },
 
-    /** @param {{ email: string, roleIds: string[] }} input */
-    async invite({ email, roleIds }) {
+    /** @param {{ email: string, roleIds: string[], employeeId?: string }} input */
+    async invite({ email, roleIds, employeeId }) {
       const c = ctx();
       const roles = await loadRoles(roleIds);
       const sensitive = assertMayGrant(roles);
@@ -167,6 +168,7 @@ export function createMembersService({ env, auth, redis, queues }) {
           data: roles.map((r) => ({ membershipId: membership.id, roleId: r.id, grantedBy: c.userId })),
         });
       });
+      if (employeeId && employees) await employees.linkMember(membership.id, employeeId);
       const token = await auth.signInviteToken({
         userId: user.id,
         tenantId: c.tenantId,
