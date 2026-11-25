@@ -129,6 +129,16 @@ const checkSchedule = (/** @type {any} */ b, /** @type {z.RefinementCtx} */ ctx)
 export const WorkScheduleBody = WorkScheduleShape.superRefine(checkSchedule);
 export const WorkSchedulePatch = WorkScheduleShape.partial().strict().superRefine(checkSchedule);
 
+export const WorkLocationBody = z
+  .object({
+    name: Name(),
+    type: z.enum(['OFFICE', 'WFH', 'HYBRID', 'REMOTE', 'CLIENT_SITE', 'TRAVEL', 'CUSTOM']),
+    branchId: Id.nullish(),
+    requiresApproval: z.boolean().default(false),
+    isActive: z.boolean().default(true),
+  })
+  .strict();
+
 export const HolidayCalendarBody = z
   .object({
     name: Name(120),

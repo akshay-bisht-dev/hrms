@@ -53,6 +53,8 @@ export function AuthProvider({ children }) {
         }
       },
       can: (code) => Boolean(state.me?.permissions.some((p) => p.code === code)),
+      /** Data scope of a permission (OWN, TEAM, … COMPANY), or null when not held. */
+      scopeOf: (code) => state.me?.permissions.find((p) => p.code === code)?.scope ?? null,
     }),
     [state, loadMe],
   );

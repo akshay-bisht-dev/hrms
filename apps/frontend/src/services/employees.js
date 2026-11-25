@@ -13,6 +13,8 @@ export const employeesApi = {
   revealId: (id) => apiFetch(`${base}/${id}/national-id`),
   history: (id) => apiFetch(`${base}/${id}/employment-records`),
   changeJob: (id, body) => apiFetch(`${base}/${id}/employment-records`, { method: 'POST', json: body }),
+  cancelScheduled: (id, recordId) =>
+    apiFetch(`${base}/${id}/employment-records/${recordId}`, { method: 'DELETE' }),
   changeStatus: (id, body) => apiFetch(`${base}/${id}/status`, { method: 'POST', json: body }),
   contacts: (id) => apiFetch(`${base}/${id}/emergency-contacts`),
   addContact: (id, body) => apiFetch(`${base}/${id}/emergency-contacts`, { method: 'POST', json: body }),

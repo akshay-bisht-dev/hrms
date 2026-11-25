@@ -17,7 +17,13 @@
     "switchCompany": "Switch company",
     "people": "People",
     "employees": "Employees",
-    "myProfile": "My profile"
+    "myProfile": "My profile",
+    "attendance": "Attendance",
+    "myAttendance": "My attendance",
+    "teamAttendance": "Team attendance",
+    "approvals": "Approvals",
+    "attendanceReports": "Reports",
+    "attendanceSettings": "Attendance"
   },
   "status": {
     "title": "System status",
@@ -448,7 +454,9 @@
       "statusSave": "Change status",
       "to": "to",
       "noManager": "— No manager —",
-      "noChange": "— Keep current —"
+      "noChange": "— Keep current —",
+      "scheduled": "Scheduled",
+      "cancelScheduled": "Cancel this change"
     },
     "contacts": {
       "name": "Name",
@@ -515,6 +523,248 @@
         "FAILED": "Failed"
       },
       "counts": "{{ok}} imported or skipped · {{failed}} with errors · {{total}} rows"
+    }
+  },
+  "attendance": {
+    "title": "My attendance",
+    "subtitle": "Times are shown in your time zone ({{tz}}).",
+    "noRecord": "Your sign-in is not linked to an employee record yet, so there is nothing to clock in to. Ask HR to link it.",
+    "history": "Days",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "month": "Month",
+    "noDays": "No attendance recorded in this month yet.",
+    "fix": "Fix",
+    "correctionPending": "Correction pending",
+    "lateBy": "{{time}} late",
+    "myRequests": "My correction requests",
+    "newCorrection": "Request a correction",
+    "noRequests": "You have not asked for any corrections.",
+    "decisionNote": "Note",
+    "cancelRequest": "Cancel request",
+    "status": {
+      "PRESENT": "Present",
+      "WFH": "Working from home",
+      "HALF_DAY": "Half day",
+      "ABSENT": "Absent",
+      "ON_LEAVE": "On leave",
+      "HOLIDAY": "Holiday",
+      "WEEKEND": "Weekend",
+      "PENDING": "In progress",
+      "NOT_RECORDED": "Not recorded"
+    },
+    "flag": {
+      "MISSING_OUT": "No clock-out",
+      "CORRECTED": "Corrected",
+      "LATE": "Late",
+      "EARLY_LEAVE": "Left early",
+      "OVERTIME": "Overtime",
+      "WORKED_ON_REST_DAY": "Worked on a rest day"
+    },
+    "request": {
+      "PENDING": "Waiting",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "CANCELLED": "Cancelled",
+      "NONE": "—"
+    },
+    "col": {
+      "date": "Date",
+      "status": "Status",
+      "in": "In",
+      "out": "Out",
+      "worked": "Worked",
+      "late": "Late",
+      "overtime": "Overtime",
+      "actions": "Actions",
+      "name": "Name",
+      "department": "Department",
+      "punches": "Clock events"
+    },
+    "plan": {
+      "holiday": "Today is a holiday: {{name}}.",
+      "weekend": "Today is a rest day.",
+      "fixed": "Your hours today: {{start}}–{{end}}.",
+      "flexible": "Flexible hours today: {{hours}} expected.",
+      "none": "No hours are planned for you today."
+    },
+    "clock": {
+      "title": "Clock in",
+      "out": "You are clocked out",
+      "inSince": "Clocked in since {{time}}",
+      "workedToday": "Worked today",
+      "location": "Where are you working?",
+      "noLocation": "Not specified",
+      "clockIn": "Clock in",
+      "clockOut": "Clock out"
+    },
+    "capture": {
+      "time": "the time",
+      "ip": "your IP address",
+      "geo": "your location (your browser will ask first)",
+      "notice": "When you clock in or out, your company records {{items}}. Nothing else is collected."
+    },
+    "correction": {
+      "title": "Request a correction",
+      "help": "Give the times that should have been recorded. Your manager approves it, and the original clock events stay on record.",
+      "date": "Day",
+      "in": "Clock-in time",
+      "out": "Clock-out time",
+      "nextDay": "Clock-out was on the next day (night shift)",
+      "reason": "Reason",
+      "submit": "Send for approval"
+    },
+    "team": {
+      "title": "Team attendance",
+      "subtitle": "Everyone you can see, for one day.",
+      "date": "Day",
+      "filter": "Filter by status",
+      "all": "All",
+      "empty": "Nobody matches this filter."
+    }
+  },
+  "approvals": {
+    "title": "Approvals",
+    "subtitle": "Corrections and overtime from your team that are waiting for you.",
+    "corrections": "Attendance corrections",
+    "overtime": "Overtime",
+    "none": "Nothing is waiting for you.",
+    "recorded": "Recorded",
+    "requested": "Asked for",
+    "overtimeLine": "{{overtime}} overtime ({{worked}} worked)",
+    "approve": "Approve",
+    "reject": "Reject",
+    "approveWhat": "Approve {{what}}",
+    "rejectWhat": "Reject {{what}}",
+    "comment": "Note for {{what}}",
+    "commentPlaceholder": "Note (needed to reject)",
+    "rejectNeedsNote": "Add a note to reject",
+    "nothingRecorded": "nothing recorded"
+  },
+  "attReport": {
+    "title": "Attendance report",
+    "subtitle": "Totals per person for the period, for everyone you can see.",
+    "download": "Download CSV",
+    "from": "From",
+    "to": "To",
+    "empty": "No people in this period.",
+    "pendingOt": "{{time}} waiting",
+    "col": {
+      "present": "Present",
+      "wfh": "From home",
+      "halfDay": "Half days",
+      "absent": "Absent",
+      "lateDays": "Late days",
+      "missingOut": "No clock-out",
+      "worked": "Worked",
+      "overtime": "Approved overtime"
+    }
+  },
+  "attSettings": {
+    "title": "Attendance settings",
+    "subtitle": "Shifts, overtime, thresholds and where people can work from.",
+    "noAccess": "You need permission to manage attendance to do this.",
+    "tabs": {
+      "shifts": "Shifts",
+      "assignments": "Shift assignments",
+      "overtime": "Overtime rules",
+      "policy": "Policy",
+      "locations": "Work locations",
+      "recalculate": "Recalculate"
+    },
+    "shift": {
+      "help": "Planned hours. An end time before the start time means the shift ends the next day.",
+      "empty": "No shifts yet. People without a shift follow their work schedule.",
+      "name": "Name",
+      "hours": "Hours",
+      "nextDay": "next day",
+      "break": "Break",
+      "grace": "Grace late / early",
+      "start": "Start",
+      "end": "End",
+      "endHint": "Earlier than the start = next day",
+      "breakMinutes": "Unpaid break (minutes)",
+      "graceLate": "Grace for arriving late (minutes)",
+      "graceEarly": "Grace for leaving early (minutes)"
+    },
+    "assign": {
+      "title": "Assign a shift",
+      "help": "From the start date, the shift replaces any earlier one for these people.",
+      "shift": "Shift",
+      "from": "From",
+      "to": "Until",
+      "toHint": "Leave empty for no end date",
+      "people": "People",
+      "submit": "Assign to {{count}} people",
+      "done": "Shift assigned to {{count}} people.",
+      "current": "Assignments",
+      "empty": "No shift assignments yet.",
+      "open": "No end date",
+      "remove": "Remove assignment for {{name}}"
+    },
+    "ot": {
+      "help": "Minutes above a threshold count as overtime. The multiplier is stored for payroll; nothing is paid from here.",
+      "empty": "No overtime rules. No overtime is counted.",
+      "name": "Name",
+      "entity": "Legal entity",
+      "allEntities": "All",
+      "thresholds": "Thresholds",
+      "daily": "over {{time}} a day",
+      "weekly": "over {{time}} a week",
+      "multiplier": "Pay multiplier",
+      "multiplierHint": "For example 1.5",
+      "from": "From",
+      "to": "Until",
+      "dailyMin": "Daily threshold (minutes)",
+      "weeklyMin": "Weekly threshold (minutes)",
+      "requiresApproval": "Needs approval",
+      "restDay": "All work on rest days and holidays is overtime"
+    },
+    "policy": {
+      "help": "How days are classed, and what is recorded when people clock in.",
+      "appliesTo": "Applies to",
+      "company": "Whole company (default)",
+      "source": {
+        "DEFAULT": "Using built-in defaults",
+        "COMPANY": "Using the company default",
+        "LEGAL_ENTITY": "Using this legal entity’s own policy"
+      },
+      "present": "Present from (% of planned time)",
+      "presentHint": "Below this but above the half-day level is a half day",
+      "halfDay": "Half day from (% of planned time)",
+      "window": "Corrections allowed for (days back)",
+      "autoBreak": "Deduct the planned break if it was not taken as a clock-out",
+      "autoBreakHint": "Only once more than half the planned time was worked",
+      "captureIp": "Record the IP address when people clock in or out",
+      "captureGeo": "Record location when people clock in or out",
+      "captureHint": "People see this on the clock-in screen before they clock in.",
+      "save": "Save policy"
+    },
+    "loc": {
+      "help": "Places people choose when they clock in. Locations that need approval are hidden until requests arrive with Work Status.",
+      "empty": "No work locations yet.",
+      "name": "Name",
+      "type": "Type",
+      "status": "Status",
+      "active": "Active",
+      "inactive": "Inactive",
+      "needsApproval": "Needs approval",
+      "types": {
+        "OFFICE": "Office",
+        "WFH": "Home",
+        "HYBRID": "Hybrid",
+        "REMOTE": "Remote",
+        "CLIENT_SITE": "Client site",
+        "TRAVEL": "Travel",
+        "CUSTOM": "Other"
+      }
+    },
+    "recalc": {
+      "help": "Recalculates days after you change shifts, rules or the policy. It runs in the background; locked days are not changed.",
+      "from": "From",
+      "to": "To",
+      "submit": "Recalculate",
+      "queued": "Recalculation started. Days update within a few minutes."
     }
   }
 }

@@ -1,6 +1,6 @@
 // @ts-check
-import { Worker, UnrecoverableError } from 'bullmq';
-import { QUEUES } from '@hrms/shared/queues';
+import { Queue, Worker, UnrecoverableError } from 'bullmq';
+import { QUEUES, DEFAULT_JOB_OPTIONS } from '@hrms/shared/queues';
 import { createLogger } from '@hrms/backend/lib/logger.js';
 import { createRedis } from '@hrms/backend/lib/redis.js';
 import { loadWorkerConfig } from './config.js';
@@ -8,7 +8,9 @@ import nodemailer from 'nodemailer';
 import { createSystemProcessor } from './processors/system.js';
 import { createNotificationsProcessor } from './processors/notifications.js';
 import { createFilesProcessor, createImportsProcessor } from './processors/tenant-jobs.js';
-import { initDb, closeDb } from '@hrms/backend/lib/db.js';
+import { createWorkSessionsProcessor } from './processors/work-sessions.js';
+import { createAttendanceService } from '@hrms/backend/modules/attendance/attendance.service.js';
+import { initDb, closeDb, platformDb } from '@hrms/backend/lib/db.js';
 import { createS3, storage } from '@hrms/backend/lib/storage.js';
 import { createCipher } from '@hrms/backend/lib/crypto.js';
 import { createEmployeesService } from '@hrms/backend/modules/employees/employees.service.js';
@@ -54,6 +56,12 @@ const employees = createEmployeesService({
     : {}),
 });
 const imports = createImportsService({ employees, files, buckets });
+const attendance = createAttendanceService();
+// Fan-out jobs enqueue per-tenant children on the same queue.
+const workSessionsQueue = new Queue(QUEUES.WORK_SESSIONS, {
+  connection,
+  defaultJobOptions: DEFAULT_JOB_OPTIONS,
+});
 
 const workers = [
   new Worker(QUEUES.FILES, guarded(createFilesProcessor({ files, bucket: buckets.documents, logger })), {
@@ -71,6 +79,13 @@ const workers = [
       connection,
       concurrency: config.WORKER_NOTIFICATIONS_CONCURRENCY,
     },
+  ),
+  new Worker(
+    QUEUES.WORK_SESSIONS,
+    guarded(
+      createWorkSessionsProcessor({ attendance, employees, platformDb, queue: workSessionsQueue, logger }),
+    ),
+    { connection, concurrency: config.WORKER_WORK_SESSIONS_CONCURRENCY },
   ),
   new Worker(QUEUES.SYSTEM, guarded(createSystemProcessor({ logger })), {
     connection,
@@ -98,6 +113,7 @@ async function shutdown(signal) {
   const force = setTimeout(() => process.exit(1), config.SHUTDOWN_TIMEOUT_MS);
   force.unref();
   await Promise.allSettled(workers.map((w) => w.close()));
+  await workSessionsQueue.close().catch(() => {});
   await connection.quit().catch(() => {});
   await closeDb().catch(() => {});
   logger.info('Worker stopped');

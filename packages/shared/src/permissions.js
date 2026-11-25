@@ -37,7 +37,7 @@ export const PERMISSIONS = Object.freeze([
   // Attendance & leave
   p('attendance.view', 'View attendance within scope'),
   p('attendance.manage', 'Manage shifts, rules and attendance records'),
-  p('attendance.regularization.approve', 'Approve attendance corrections'),
+  p('attendance.regularization.approve', 'Approve attendance corrections and overtime'),
   p('leave.config.manage', 'Manage leave types and policies'),
   p('leave.request.view', 'View leave requests within scope'),
   p('leave.request.approve', 'Approve leave requests'),

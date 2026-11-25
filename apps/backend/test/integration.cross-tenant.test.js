@@ -4,6 +4,7 @@
 // A new route with an id parameter and no fixture below makes this suite fail, so coverage cannot silently drop.
 import { apiRouter } from '../src/routes/index.js';
 import { listRoutes } from '../src/lib/route-registry.js';
+import request from 'supertest';
 import { startHarness } from './helpers/harness.js';
 
 let h;
@@ -71,6 +72,9 @@ beforeAll(async () => {
     nationalId: 'ABCDE1234F',
   });
   ids.employee = emp.id;
+  ids.employmentRecord = (
+    await A.call('get', `/employees/${emp.id}/employment-records`).expect(200)
+  ).body.data[0].id;
   ids.contact = (
     await post(`/employees/${emp.id}/emergency-contacts`, {
       name: 'A contact',
@@ -101,6 +105,40 @@ beforeAll(async () => {
   ids.importJob = (
     await A.call('post', '/employees/imports').send({ uploadId: up.uploadId }).expect(202)
   ).body.id;
+  // Attendance: link A's owner to the employee record so A can clock in and ask for a correction.
+  const aMembers = (await A.call('get', '/tenants/members').expect(200)).body.data;
+  const aOwnerMembership = aMembers.find((m) => m.email === A.email).id;
+  await A.call('put', `/tenants/members/${aOwnerMembership}/employee`)
+    .send({ employeeId: emp.id })
+    .expect(204);
+  ids.workLocation = (await post('/companies/work-locations', { name: 'A office', type: 'OFFICE' })).id;
+  ids.shift = (
+    await post('/attendance/shifts', { name: 'A shift', startTime: '09:00', endTime: '18:00' })
+  ).id;
+  ids.overtimeRule = (
+    await post('/attendance/overtime-rules', {
+      name: 'A rule',
+      dailyThresholdMin: 480,
+      multiplier: '1.5',
+      effectiveFrom: '2026-01-01',
+    })
+  ).id;
+  await post('/attendance/shift-assignments', {
+    shiftId: ids.shift,
+    employeeIds: [emp.id],
+    effectiveFrom: '2026-01-05',
+  });
+  ids.assignment = (await A.call('get', '/attendance/shift-assignments').expect(200)).body.data[0].id;
+  await post('/attendance/punches', { type: 'IN', workLocationId: ids.workLocation });
+  const yesterday = new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10);
+  const correction = await post('/attendance/regularizations', {
+    workDate: yesterday,
+    inTime: '09:00',
+    outTime: '18:00',
+    reason: 'A forgot to clock in',
+  });
+  ids.regularization = correction.id;
+  ids.day = correction.day.id;
   ids.bRole = (await B.call('get', '/tenants/roles').expect(200)).body.data.find(
     (r) => r.systemKey === 'employee',
   ).id;
@@ -117,6 +155,20 @@ function fixtureFor(method, path) {
     [/^\/companies\/teams\/:id$/, { id: ids.team }, { name: 'Pwned' }],
     [/^\/companies\/work-schedules\/:id$/, { id: ids.schedule }, { name: 'Pwned' }],
     [/^\/companies\/holiday-calendars\/:id$/, { id: ids.calendar }, { name: 'Pwned' }],
+    [/^\/companies\/work-locations\/:id$/, { id: ids.workLocation }, { name: 'Pwned' }],
+    [/^\/attendance\/shifts\/:id$/, { id: ids.shift }, { name: 'Pwned' }],
+    [/^\/attendance\/overtime-rules\/:id$/, { id: ids.overtimeRule }, { name: 'Pwned' }],
+    [/^\/attendance\/shift-assignments\/:id$/, { id: ids.assignment }, undefined],
+    [/^\/attendance\/days\/:id$/, { id: ids.day }, undefined],
+    [/^\/attendance\/days\/:id\/overtime-decision$/, { id: ids.day }, { decision: 'APPROVED' }],
+    [
+      /^\/attendance\/employees\/:id\/days$/,
+      { id: ids.employee },
+      undefined,
+      '?from=2026-01-05&to=2026-02-05',
+    ],
+    [/^\/attendance\/regularizations\/:id(\/cancel)?$/, { id: ids.regularization }, undefined],
+    [/^\/attendance\/regularizations\/:id\/decision$/, { id: ids.regularization }, { decision: 'APPROVED' }],
     [
       /^\/companies\/holiday-calendars\/:calendarId\/holidays$/,
       { calendarId: ids.calendar },
@@ -140,6 +192,11 @@ function fixtureFor(method, path) {
       /^\/employees\/:id\/employment-records$/,
       { id: ids.employee },
       { effectiveFrom: '2026-01-05', changeReason: 'TRANSFER', departmentId: null },
+    ],
+    [
+      /^\/employees\/:id\/employment-records\/:childId$/,
+      { id: ids.employee, childId: ids.employmentRecord },
+      undefined,
     ],
     [
       /^\/employees\/:id\/status$/,
@@ -175,9 +232,9 @@ function fixtureFor(method, path) {
   ];
   const hit = table.find(([re]) => re.test(path));
   if (!hit) return null;
-  const [, params, body] = hit;
+  const [, params, body, query = ''] = hit;
   return {
-    url: path.replace(/:(\w+)/g, (_, name) => params[name]),
+    url: path.replace(/:(\w+)/g, (_, name) => params[name]) + query,
     body: method === 'GET' || method === 'DELETE' ? undefined : body,
   };
 }
@@ -218,6 +275,14 @@ test("tenant B's lists never contain tenant A's records", async () => {
     '/tenants/members?status=INVITED',
     '/companies/org-chart',
     '/auth/sessions',
+    '/companies/work-locations',
+    '/attendance/shifts',
+    '/attendance/overtime-rules',
+    '/attendance/shift-assignments',
+    '/attendance/regularizations?view=approvals',
+    '/attendance/overtime',
+    `/attendance/days?date=${new Date().toISOString().slice(0, 10)}`,
+    `/attendance/reports/summary?from=2026-01-05&to=2026-03-31`,
   ];
   const aIds = Object.entries(ids)
     .filter(([k]) => k !== 'bRole')
@@ -244,6 +309,34 @@ test("tenant B cannot create records that point at tenant A's records", async ()
     ['/companies/departments', { name: 'X', code: 'XD1', parentId: ids.department }],
     ['/companies/teams', { name: 'X team', departmentId: ids.department }],
     ['/tenants/invitations', { email: h.uniqueEmail('x'), roleIds: [ids.role] }],
+    [
+      '/attendance/shift-assignments',
+      { shiftId: ids.shift, employeeIds: [ids.employee], effectiveFrom: '2026-02-01' },
+    ],
+    [
+      '/attendance/shift-assignments',
+      {
+        shiftId: (
+          await B.call('post', '/attendance/shifts').send({
+            name: 'B shift',
+            startTime: '08:00',
+            endTime: '16:00',
+          })
+        ).body.id,
+        employeeIds: [ids.employee],
+        effectiveFrom: '2026-02-01',
+      },
+    ],
+    [
+      '/attendance/overtime-rules',
+      {
+        name: 'X',
+        legalEntityId: ids.legalEntity,
+        dailyThresholdMin: 60,
+        multiplier: '2',
+        effectiveFrom: '2026-01-01',
+      },
+    ],
   ];
   for (const [path, body] of cases) {
     const res = await B.call('post', path).send(body);
@@ -286,4 +379,21 @@ test("tenant A's data is unchanged after all of that", async () => {
   expect(
     (await A.call('get', `/employees/${ids.employee}/documents`).expect(200)).body.data.map((d) => d.id),
   ).toEqual([ids.document]);
+  expect((await A.call('get', `/attendance/shifts/${ids.shift}`).expect(200)).body.name).toBe('A shift');
+  expect(
+    (await A.call('get', `/attendance/regularizations/${ids.regularization}`).expect(200)).body.status,
+  ).toBe('PENDING');
+  expect((await A.call('get', '/attendance/shift-assignments').expect(200)).body.data).toHaveLength(1);
+  expect((await A.call('get', '/attendance/me/status').expect(200)).body.clockedIn).toBe(true);
+});
+
+test('every registered route is in the API docs', async () => {
+  const doc = (await request(h.app).get('/api/docs/openapi.json').expect(200)).body;
+  const documented = new Set(
+    Object.entries(doc.paths).flatMap(([p, ops]) => Object.keys(ops).map((m) => `${m.toUpperCase()} ${p}`)),
+  );
+  const missing = listRoutes(apiRouter(h.services.routes))
+    .map((r) => `${r.method} /api/v1${r.path.replace(/:(\w+)/g, '{$1}')}`.replace(/\/$/, ''))
+    .filter((k) => !documented.has(k));
+  expect(missing).toEqual([]);
 });

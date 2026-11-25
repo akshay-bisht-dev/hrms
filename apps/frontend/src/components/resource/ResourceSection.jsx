@@ -13,7 +13,7 @@ import { errorMessage } from '@/utils/errors';
  * empty, error and success states). Fields describe the form; `toBody` / `fromRow` convert between form and API shapes.
  *
  * @typedef {{ name: string, label: string, type?: 'text'|'number'|'select'|'checkbox'|'timezone', required?: boolean, hint?: string,
- *             options?: Array<{ value: string, label: string }>, optional?: boolean }} FieldDef
+ *             options?: Array<{ value: string, label: string }>, optional?: boolean, default?: any }} FieldDef
  * @param {{ title: string, description?: string, endpoint: string, queryKey: unknown[], columns: Array<{ key: string, label: string, render?: (row: any) => any }>,
  *           fields: FieldDef[], canWrite: boolean, emptyText: string, toBody?: (form: any) => any, fromRow?: (row: any) => any,
  *           rowActions?: (row: any) => any, searchable?: boolean }} props
@@ -47,7 +47,7 @@ export function ResourceSection({
     queryFn: () => apiFetch(`${endpoint}?limit=200${q ? `&q=${encodeURIComponent(q)}` : ''}`),
   });
   const emptyForm = useMemo(
-    () => Object.fromEntries(fields.map((f) => [f.name, f.type === 'checkbox' ? false : ''])),
+    () => Object.fromEntries(fields.map((f) => [f.name, f.default ?? (f.type === 'checkbox' ? false : '')])),
     [fields],
   );
   const timezones = useMemo(
@@ -179,7 +179,7 @@ export function ResourceSection({
               <Field
                 key={f.name}
                 label={f.label}
-                type={f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text'}
+                type={['number', 'date', 'time'].includes(f.type) ? f.type : 'text'}
                 value={form[f.name] ?? ''}
                 hint={f.hint}
                 error={fieldErrors[f.name]}

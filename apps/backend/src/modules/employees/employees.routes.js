@@ -58,6 +58,9 @@ doc('get', '/{id}/employment-records', 'Employment history', { request: { params
 doc('post', '/{id}/employment-records', 'Transfer, promotion or manager change from a date', {
   request: { params: IdParams, ...json(EmploymentChangeBody) },
 });
+doc('delete', '/{id}/employment-records/{childId}', 'Cancel a change that has not taken effect yet', {
+  request: { params: ChildParams },
+});
 doc('post', '/{id}/status', 'Change status (probation, notice, exit …)', {
   request: { params: IdParams, ...json(StatusChangeBody) },
 });
@@ -178,6 +181,15 @@ export function employeesRouter({ access, employees, imports }) {
     update,
     validate({ params: IdParams, body: EmploymentChangeBody }),
     async (req, res) => res.status(201).json(await employees.changeEmployment(req.params.id, req.body)),
+  );
+  r.delete(
+    '/:id/employment-records/:childId',
+    update,
+    validate({ params: ChildParams }),
+    async (req, res) => {
+      await employees.cancelScheduledChange(req.params.id, req.params.childId);
+      res.status(204).end();
+    },
   );
   r.post('/:id/status', update, validate({ params: IdParams, body: StatusChangeBody }), async (req, res) =>
     res.json(await employees.changeStatus(req.params.id, req.body)),

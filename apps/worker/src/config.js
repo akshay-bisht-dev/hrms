@@ -27,6 +27,7 @@ const Schema = z.object({
   WORKER_FILES_CONCURRENCY: z.coerce.number().int().min(1).max(50).default(4),
   WORKER_IMPORTS_CONCURRENCY: z.coerce.number().int().min(1).max(10).default(1),
   WORKER_SYSTEM_CONCURRENCY: z.coerce.number().int().min(1).max(50).default(2),
+  WORKER_WORK_SESSIONS_CONCURRENCY: z.coerce.number().int().min(1).max(20).default(2),
   SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().min(1000).default(25000),
 });
 

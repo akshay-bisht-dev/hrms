@@ -7,6 +7,7 @@ import { currentContext } from '../../lib/context.js';
 import { db } from '../../lib/db.js';
 import { AppError, ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../../lib/errors.js';
 import { keys } from '../../lib/storage.js';
+import { localYmd } from '../../lib/time.js';
 import { invalidateAccess } from '../rbac/access.js';
 import { insertNode, moveSubtree, wouldCreateCycle } from './hierarchy.js';
 import { employeeScope, isSelf } from './scope.js';
@@ -402,13 +403,16 @@ export function createEmployeesService(deps) {
       const e = await scopedOr404(id, 'employee.profile.update');
       if (e.status === 'EXITED')
         throw new ConflictError('employee_exited', 'This person has left the company');
-      if (input.effectiveFrom > todayYmd())
-        throw new ValidationError([
-          {
-            path: 'body.effectiveFrom',
-            message: 'Future-dated changes are not supported yet. Use today or an earlier date.',
-          },
-        ]);
+      const today = localYmd(new Date(), e.timezone);
+      const future = input.effectiveFrom > today;
+      const scheduled = await db().employmentRecord.findFirst({
+        where: { employeeId: id, effectiveFrom: { gt: asDate(today) } },
+      });
+      if (scheduled)
+        throw new ConflictError(
+          'change_scheduled',
+          `A change is already scheduled for ${ymd(scheduled.effectiveFrom)}. Cancel it first.`,
+        );
       if (input.effectiveFrom < ymd(e.dateOfJoining))
         throw new ValidationError([
           { path: 'body.effectiveFrom', message: 'Must be on or after the joining date' },
@@ -440,7 +444,7 @@ export function createEmployeesService(deps) {
         const next = Object.fromEntries(
           JOB_FIELDS.map((f) => [f, f in input ? (input[f] ?? null) : (current?.[f] ?? e[f] ?? null)]),
         );
-        if (current && ymd(current.effectiveFrom) === input.effectiveFrom) {
+        if (!future && current && ymd(current.effectiveFrom) === input.effectiveFrom) {
           await tx.employmentRecord.update({
             where: { id: current.id },
             data: { ...next, changeReason: input.changeReason },
@@ -462,13 +466,16 @@ export function createEmployeesService(deps) {
             },
           });
         }
-        await tx.employee.update({
-          where: { id },
-          data: Object.fromEntries(SNAPSHOT_FIELDS.map((f) => [f, next[f]])),
-        });
-        if (next.managerId !== e.managerId) await moveSubtree(tx, id, next.managerId);
+        // A future change is stored now and applied on its date by the worker (applyDueChanges).
+        if (!future) {
+          await tx.employee.update({
+            where: { id },
+            data: Object.fromEntries(SNAPSHOT_FIELDS.map((f) => [f, next[f]])),
+          });
+          if (next.managerId !== e.managerId) await moveSubtree(tx, id, next.managerId);
+        }
         await audit(tx, {
-          action: 'employee.employment_changed',
+          action: future ? 'employee.employment_change_scheduled' : 'employee.employment_changed',
           entityType: 'Employee',
           entityId: id,
           changes: {
@@ -483,9 +490,91 @@ export function createEmployeesService(deps) {
       return service.get(id);
     },
 
+    /**
+     * Cancels a change that has not taken effect yet and reopens the record before it.
+     * @param {string} id @param {string} recordId
+     */
+    async cancelScheduledChange(id, recordId) {
+      const e = await scopedOr404(id, 'employee.profile.update');
+      const rec = await db().employmentRecord.findFirst({ where: { id: recordId, employeeId: id } });
+      if (!rec) throw new NotFoundError();
+      if (/** @type {string} */ (ymd(rec.effectiveFrom)) <= localYmd(new Date(), e.timezone))
+        throw new ConflictError('already_effective', 'This change has already taken effect');
+      await db().$transaction(async (/** @type {any} */ tx) => {
+        await tx.employmentRecord.delete({ where: { id: rec.id } });
+        await tx.employmentRecord.updateMany({
+          where: { employeeId: id, effectiveTo: asDate(addDays(ymd(rec.effectiveFrom), -1)) },
+          data: { effectiveTo: null },
+        });
+        await audit(tx, {
+          action: 'employee.employment_change_cancelled',
+          entityType: 'Employee',
+          entityId: id,
+          changes: { effectiveFrom: ymd(rec.effectiveFrom), reason: rec.changeReason },
+        });
+      });
+    },
+
+    /**
+     * Worker job: applies employment records whose date has arrived (in each employee's time zone) to the
+     * employee snapshot and the reporting hierarchy. Safe to run repeatedly; a change that would now create a
+     * reporting loop is skipped and audited instead.
+     * @param {Date} [now]
+     */
+    async applyDueChanges(now = new Date()) {
+      const utcToday = /** @type {string} */ (ymd(now));
+      const recent = await db().employmentRecord.findMany({
+        where: {
+          effectiveFrom: { gte: asDate(addDays(utcToday, -3)), lte: asDate(addDays(utcToday, 1)) },
+          employee: { status: { not: 'EXITED' }, deletedAt: null },
+        },
+        orderBy: { effectiveFrom: 'asc' },
+        include: { employee: true },
+      });
+      let applied = 0;
+      let skipped = 0;
+      for (const rec of recent) {
+        const emp = rec.employee;
+        const today = localYmd(now, emp.timezone);
+        if (/** @type {string} */ (ymd(rec.effectiveFrom)) > today) continue;
+        if (rec.effectiveTo && /** @type {string} */ (ymd(rec.effectiveTo)) < today) continue;
+        const fresh = await db().employee.findUnique({ where: { id: emp.id } });
+        if (!fresh || SNAPSHOT_FIELDS.every((f) => fresh[f] === rec[f])) continue;
+        await db().$transaction(async (/** @type {any} */ tx) => {
+          if (rec.managerId !== fresh.managerId && rec.managerId) {
+            const m = await tx.employee.findUnique({ where: { id: rec.managerId } });
+            if (!m || m.status === 'EXITED' || (await wouldCreateCycle(tx, emp.id, rec.managerId))) {
+              skipped++;
+              await audit(tx, {
+                action: 'employee.employment_change_skipped',
+                entityType: 'Employee',
+                entityId: emp.id,
+                changes: { recordId: rec.id, reason: 'manager_unusable_or_loop' },
+              });
+              return;
+            }
+          }
+          await tx.employee.update({
+            where: { id: emp.id },
+            data: Object.fromEntries(SNAPSHOT_FIELDS.map((f) => [f, rec[f]])),
+          });
+          if (rec.managerId !== fresh.managerId) await moveSubtree(tx, emp.id, rec.managerId);
+          await audit(tx, {
+            action: 'employee.employment_change_applied',
+            entityType: 'Employee',
+            entityId: emp.id,
+            changes: { recordId: rec.id, effectiveFrom: ymd(rec.effectiveFrom) },
+          });
+          applied++;
+        });
+      }
+      return { applied, skipped };
+    },
+
     /** @param {string} id */
     async employmentHistory(id) {
-      await scopedOr404(id, 'employee.profile.view', { includeSelf: true });
+      const e = await scopedOr404(id, 'employee.profile.view', { includeSelf: true });
+      const today = localYmd(new Date(), e.timezone);
       const rows = await db().employmentRecord.findMany({
         where: { employeeId: id },
         orderBy: { effectiveFrom: 'desc' },
@@ -501,6 +590,7 @@ export function createEmployeesService(deps) {
         changeReason: r.changeReason,
         effectiveFrom: ymd(r.effectiveFrom),
         effectiveTo: ymd(r.effectiveTo),
+        scheduled: /** @type {string} */ (ymd(r.effectiveFrom)) > today,
         department: r.department?.name ?? null,
         designation: r.designation?.title ?? null,
         branch: r.branch?.name ?? null,

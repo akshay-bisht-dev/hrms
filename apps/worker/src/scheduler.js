@@ -12,6 +12,22 @@ import { loadWorkerConfig } from './config.js';
  */
 export const SCHEDULES = [
   { queue: QUEUES.SYSTEM, id: 'system-heartbeat', every: 60_000, name: 'heartbeat', data: {} },
+  // Closes finished days (absent, missing clock-out) and refreshes the last two days in every company.
+  {
+    queue: QUEUES.WORK_SESSIONS,
+    id: 'attendance-rollup',
+    every: 30 * 60_000,
+    name: 'attendance-rollup',
+    data: {},
+  },
+  // Applies future-dated transfers, promotions and manager changes on their date (each employee's time zone).
+  {
+    queue: QUEUES.WORK_SESSIONS,
+    id: 'employment-apply-due',
+    every: 60 * 60_000,
+    name: 'employment-apply-due',
+    data: {},
+  },
 ];
 
 const config = loadWorkerConfig(process.env);

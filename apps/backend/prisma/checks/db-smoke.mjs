@@ -305,6 +305,74 @@ await check(
   /IMMUTABLE/,
 );
 
+// Attendance (Sprint 5) ----------------------------------------------------------
+const punch = await db.attendancePunch.create({
+  data: {
+    id: id(),
+    tenantId: A.t.id,
+    employeeId: A.emp.id,
+    type: 'IN',
+    serverTs: new Date(),
+    workDate: new Date('2026-11-25T00:00:00Z'),
+    source: 'WEB',
+  },
+});
+await check(
+  'attendance punch edit blocked',
+  () => db.attendancePunch.update({ where: { id: punch.id }, data: { type: 'OUT' } }),
+  /IMMUTABLE/,
+);
+await check(
+  'tenant B punch cannot use tenant A work location (composite FK)',
+  () =>
+    db.attendancePunch.create({
+      data: {
+        id: id(),
+        tenantId: B.t.id,
+        employeeId: B.emp.id,
+        type: 'IN',
+        serverTs: new Date(),
+        workDate: new Date('2026-11-25T00:00:00Z'),
+        source: 'WEB',
+        workLocationId: loc.id,
+      },
+    }),
+  /Foreign key/i,
+);
+const day = await db.attendanceDay.create({
+  data: {
+    id: id(),
+    tenantId: A.t.id,
+    employeeId: A.emp.id,
+    workDate: new Date('2026-11-25T00:00:00Z'),
+    computedAt: new Date(),
+    isLocked: true,
+  },
+});
+await check(
+  'locked attendance day cannot change',
+  () => db.attendanceDay.update({ where: { id: day.id }, data: { workedMinutes: 480 } }),
+  /IMMUTABLE/,
+);
+await check('locked attendance day can be unlocked explicitly', () =>
+  db.attendanceDay.update({ where: { id: day.id }, data: { isLocked: false } }),
+);
+await check(
+  'attendance policy with half-day above present threshold rejected',
+  () =>
+    db.attendancePolicy.create({
+      data: {
+        id: id(),
+        tenantId: A.t.id,
+        scopeKey: 'default',
+        presentPercent: 50,
+        halfDayPercent: 60,
+        updatedAt: new Date(),
+      },
+    }),
+  /check|constraint/i,
+);
+
 console.table(results);
 await db.$disconnect();
 process.exit(results.some((r) => r[1] !== 'pass') ? 1 : 0);

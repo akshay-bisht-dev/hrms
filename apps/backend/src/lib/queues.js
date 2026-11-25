@@ -24,12 +24,17 @@ export function createQueues(connection) {
     connection,
     defaultJobOptions: { ...DEFAULT_JOB_OPTIONS, attempts: 2 },
   });
+  const workSessions = new Queue(QUEUES.WORK_SESSIONS, {
+    connection,
+    defaultJobOptions: { ...DEFAULT_JOB_OPTIONS, attempts: 3 },
+  });
   return {
     notifications,
     files,
     imports,
+    workSessions,
     async close() {
-      await Promise.all([notifications.close(), files.close(), imports.close()]);
+      await Promise.all([notifications.close(), files.close(), imports.close(), workSessions.close()]);
     },
   };
 }

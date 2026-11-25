@@ -12,7 +12,8 @@
     "./schemas/auth": "./src/schemas/auth.js",
     "./schemas/org": "./src/schemas/org.js",
     "./schemas/members": "./src/schemas/members.js",
-    "./schemas/employee": "./src/schemas/employee.js"
+    "./schemas/employee": "./src/schemas/employee.js",
+    "./schemas/attendance": "./src/schemas/attendance.js"
   },
   "scripts": {
     "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js"

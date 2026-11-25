@@ -265,6 +265,10 @@ function JobTab({ e, canUpdate }) {
       }),
     (_d, setNotice) => refresh(setNotice, t('employees.job.saved')),
   );
+  const cancelScheduled = useMutation({
+    mutationFn: (recordId) => employeesApi.cancelScheduled(e.id, recordId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['employee', e.id] }),
+  });
   const st = useAction(
     () => employeesApi.changeStatus(e.id, status),
     (_d, setNotice) => refresh(setNotice, t('employees.job.saved')),
@@ -301,9 +305,26 @@ function JobTab({ e, canUpdate }) {
         <ol className="mt-3 flex flex-col gap-3">
           {(history.data?.data ?? []).map((r) => (
             <li key={r.id} className="border-s-2 border-border ps-3 text-sm">
-              <div className="font-medium">
-                {t(`employees.job.reasons.${r.changeReason}`)} · {fmt(r.effectiveFrom)}
-                {r.effectiveTo ? ` – ${fmt(r.effectiveTo)}` : ` · ${t('employees.job.current')}`}
+              <div className="flex flex-wrap items-center gap-2 font-medium">
+                <span>
+                  {t(`employees.job.reasons.${r.changeReason}`)} · {fmt(r.effectiveFrom)}
+                  {r.effectiveTo
+                    ? ` – ${fmt(r.effectiveTo)}`
+                    : r.scheduled
+                      ? ''
+                      : ` · ${t('employees.job.current')}`}
+                </span>
+                {r.scheduled && <Badge tone="info">{t('employees.job.scheduled')}</Badge>}
+                {r.scheduled && canUpdate && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={cancelScheduled.isPending}
+                    onClick={() => cancelScheduled.mutate(r.id)}
+                  >
+                    {t('employees.job.cancelScheduled')}
+                  </Button>
+                )}
               </div>
               <div className="text-text-muted">
                 {[
