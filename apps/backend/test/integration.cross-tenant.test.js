@@ -71,6 +71,9 @@ beforeAll(async () => {
     nationalId: 'ABCDE1234F',
   });
   ids.employee = emp.id;
+  ids.employmentRecord = (
+    await A.call('get', `/employees/${emp.id}/employment-records`).expect(200)
+  ).body.data[0].id;
   ids.contact = (
     await post(`/employees/${emp.id}/emergency-contacts`, {
       name: 'A contact',
@@ -188,6 +191,11 @@ function fixtureFor(method, path) {
       /^\/employees\/:id\/employment-records$/,
       { id: ids.employee },
       { effectiveFrom: '2026-01-05', changeReason: 'TRANSFER', departmentId: null },
+    ],
+    [
+      /^\/employees\/:id\/employment-records\/:childId$/,
+      { id: ids.employee, childId: ids.employmentRecord },
+      undefined,
     ],
     [
       /^\/employees\/:id\/status$/,

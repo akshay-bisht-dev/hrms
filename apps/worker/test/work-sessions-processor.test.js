@@ -1,0 +1,81 @@
+import { createWorkSessionsProcessor, LIVE_TENANT_STATUSES } from '../src/processors/work-sessions.js';
+import { currentContext } from '@hrms/backend/lib/context.js';
+
+const T1 = '01a21400-0000-7000-8000-000000000001';
+const T2 = '01a21400-0000-7000-8000-000000000002';
+const U = '01a21400-0000-7000-8000-0000000000aa';
+
+function setup() {
+  const added = [];
+  const calls = [];
+  const deps = {
+    platformDb: () => ({
+      tenant: {
+        findMany: async ({ where }) => {
+          calls.push(['tenants', where.status.in]);
+          return [{ id: T1 }, { id: T2 }];
+        },
+      },
+    }),
+    queue: { add: async (name, data, opts) => added.push({ name, data, jobId: opts.jobId }) },
+    attendance: {
+      rollup: async (opts) => {
+        calls.push(['rollup', currentContext().tenantId, currentContext().userId ?? null, opts ?? null]);
+        return { employees: 3, days: 9 };
+      },
+    },
+    employees: {
+      applyDueChanges: async () => {
+        calls.push(['apply', currentContext().tenantId]);
+        return { applied: 1, skipped: 0 };
+      },
+    },
+    logger: { info() {} },
+    now: () => new Date('2026-11-25T10:42:00Z'),
+  };
+  return { process: createWorkSessionsProcessor(deps), added, calls };
+}
+const job = (name, data = {}) => ({ id: '1', name, data });
+
+test('the repeatable roll-up fans out one job per live company, deduplicated per hour', async () => {
+  const { process, added, calls } = setup();
+  expect(await process(job('attendance-rollup'))).toEqual({ tenants: 2 });
+  expect(calls[0]).toEqual(['tenants', LIVE_TENANT_STATUSES]);
+  expect(LIVE_TENANT_STATUSES).not.toContain('SUSPENDED');
+  expect(added).toEqual([
+    {
+      name: 'attendance-rollup-tenant',
+      data: { tenantId: T1 },
+      jobId: `attendance-rollup-tenant-${T1}-2026112510`,
+    },
+    {
+      name: 'attendance-rollup-tenant',
+      data: { tenantId: T2 },
+      jobId: `attendance-rollup-tenant-${T2}-2026112510`,
+    },
+  ]);
+  expect(added.every((a) => !a.jobId.includes(':'))).toBe(true); // BullMQ rejects ':' in custom ids
+});
+
+test('tenant jobs run inside that tenant context', async () => {
+  const { process, calls } = setup();
+  await process(job('attendance-rollup-tenant', { tenantId: T1 }));
+  await process(
+    job('attendance-recalculate', { tenantId: T2, userId: U, from: '2026-11-01', to: '2026-11-07' }),
+  );
+  await process(job('employment-apply-due-tenant', { tenantId: T1 }));
+  expect(calls).toEqual([
+    ['rollup', T1, null, null],
+    ['rollup', T2, U, { from: '2026-11-01', to: '2026-11-07', employeeIds: undefined }],
+    ['apply', T1],
+  ]);
+});
+
+test('bad payloads and unknown jobs are rejected', async () => {
+  const { process } = setup();
+  await expect(process(job('attendance-rollup-tenant', { tenantId: 'nope' }))).rejects.toThrow();
+  await expect(
+    process(job('attendance-recalculate', { tenantId: T1, userId: U, from: 'x', to: 'y' })),
+  ).rejects.toThrow();
+  await expect(process(job('drop-tables'))).rejects.toThrow(/Unknown work-sessions job/);
+});

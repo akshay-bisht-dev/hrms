@@ -197,13 +197,57 @@ describe('employment history and reporting lines', () => {
           .send({ effectiveFrom: '2026-02-01', changeReason: 'CORRECTION', designationId: refs.swe.id })
       ).status,
     ).toBe(422); // before current
+  });
+
+  test('future-dated changes are scheduled, applied on their date by the worker, and can be cancelled', async () => {
+    const boss = await create({ firstName: 'Future boss' });
+    const e = await create({ firstName: 'Scheduled', departmentId: refs.sales.id });
+    const inDays = (n) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+    const change = (body) => owner.call('post', `/employees/${e.id}/employment-records`).send(body);
+    await change({
+      effectiveFrom: inDays(10),
+      changeReason: 'TRANSFER',
+      departmentId: refs.eng.id,
+      managerId: boss.id,
+    }).expect(201);
+    let now = (await owner.call('get', `/employees/${e.id}`).expect(200)).body;
+    expect(now.department.code).toBe('SALES'); // not yet
+    expect(now.manager).toBeNull();
+    const hist = (await owner.call('get', `/employees/${e.id}/employment-records`).expect(200)).body.data;
+    expect(hist[0]).toMatchObject({ effectiveFrom: inDays(10), scheduled: true, department: 'Engineering' });
+    expect(hist[1]).toMatchObject({ effectiveTo: inDays(9), scheduled: false });
+    // Only one scheduled change at a time.
     expect(
       (
-        await owner
-          .call('post', `/employees/${e.id}/employment-records`)
-          .send({ effectiveFrom: '2099-01-01', changeReason: 'TRANSFER', departmentId: refs.eng.id })
-      ).status,
-    ).toBe(422); // future
+        await change({
+          effectiveFrom: inDays(20),
+          changeReason: 'PROMOTION',
+          designationId: refs.lead.id,
+        }).expect(409)
+      ).body.code,
+    ).toBe('change_scheduled');
+    // Nothing is due today; on the date it is applied once, and re-running changes nothing.
+    expect(await asWorker(() => h.services.employees.applyDueChanges())).toMatchObject({ applied: 0 });
+    const due = new Date(Date.now() + 10 * 86_400_000 + 3_600_000);
+    expect(await asWorker(() => h.services.employees.applyDueChanges(due))).toMatchObject({ applied: 1 });
+    expect(await asWorker(() => h.services.employees.applyDueChanges(due))).toMatchObject({ applied: 0 });
+    now = (await owner.call('get', `/employees/${e.id}`).expect(200)).body;
+    expect(now.department.code).toBe('ENG');
+    expect(now.manager.id).toBe(boss.id);
+
+    // Cancelling reopens the earlier record.
+    const f = await create({ firstName: 'Cancelled', departmentId: refs.sales.id });
+    await owner
+      .call('post', `/employees/${f.id}/employment-records`)
+      .send({ effectiveFrom: inDays(5), changeReason: 'TRANSFER', departmentId: refs.eng.id })
+      .expect(201);
+    const [scheduled, joining] = (
+      await owner.call('get', `/employees/${f.id}/employment-records`).expect(200)
+    ).body.data;
+    await owner.call('delete', `/employees/${f.id}/employment-records/${joining.id}`).expect(409);
+    await owner.call('delete', `/employees/${f.id}/employment-records/${scheduled.id}`).expect(204);
+    const after = (await owner.call('get', `/employees/${f.id}/employment-records`).expect(200)).body.data;
+    expect(after).toEqual([expect.objectContaining({ id: joining.id, effectiveTo: null, scheduled: false })]);
   });
 
   test('changing a manager moves the whole sub-team; loops are refused', async () => {
