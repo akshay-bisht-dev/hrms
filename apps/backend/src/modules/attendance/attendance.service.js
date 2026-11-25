@@ -16,7 +16,7 @@ import {
   zonedTime,
 } from '../../lib/time.js';
 import { toCenti } from '@hrms/shared/quantity';
-import { employeeScope } from '../employees/scope.js';
+import { anyOf, employeeScope } from '../employees/scope.js';
 import { DEFAULT_POLICY, MAX_SESSION_HOURS, computeDay, resolvePlan } from './engine.js';
 
 const ctx = () => /** @type {any} */ (currentContext());
@@ -324,7 +324,7 @@ export function createAttendanceService({ queues, now = () => new Date() } = {})
     if (ctx().permissions?.has('attendance.regularization.approve'))
       or.push(await employeeScope('attendance.regularization.approve'));
     if (!or.length) return null;
-    return { OR: or, ...(myId ? { id: { not: myId } } : {}) };
+    return { ...anyOf(or), ...(myId ? { id: { not: myId } } : {}) };
   }
 
   /** @param {string} employeeId */
@@ -685,10 +685,11 @@ export function createAttendanceService({ queues, now = () => new Date() } = {})
         const scoped = await approvableEmployees();
         const or = [
           ...(steps.length ? [{ id: { in: steps.map((s) => s.entityId) } }] : []),
-          ...(scoped ? [{ employee: scoped }] : []),
+          // An empty filter means everyone (company scope); `{ employee: {} }` would match nothing inside OR.
+          ...(scoped ? [Object.keys(scoped).length ? { employee: scoped } : {}] : []),
         ];
         if (!or.length) return [];
-        where = { OR: or, ...(myId ? { employeeId: { not: myId } } : {}) };
+        where = { ...anyOf(or), ...(myId ? { employeeId: { not: myId } } : {}) };
       }
       const rows = await db().attendanceRegularization.findMany({
         where: { ...where, ...(q.status ? { status: q.status } : {}) },

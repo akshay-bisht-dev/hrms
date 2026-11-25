@@ -7,7 +7,7 @@ import { currentContext } from '../../lib/context.js';
 import { db } from '../../lib/db.js';
 import { AppError, ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../../lib/errors.js';
 import { addDays, dateToYmd, daysBetween, localYmd, ymdToDate } from '../../lib/time.js';
-import { employeeScope } from '../employees/scope.js';
+import { anyOf, employeeScope } from '../employees/scope.js';
 import {
   accrualsDue,
   capCredit,
@@ -559,7 +559,7 @@ export function createLeaveService({ attendance, queues, now = () => new Date() 
         if (ctx().permissions?.has('leave.request.approve'))
           or.push(await employeeScope('leave.request.approve'));
         if (!or.length) return [];
-        where = { status: 'PENDING', employee: { OR: or }, ...(myEmp ? { employeeId: { not: myEmp } } : {}) };
+        where = { status: 'PENDING', employee: anyOf(or), ...(myEmp ? { employeeId: { not: myEmp } } : {}) };
       }
       const rows = await db().leaveRequest.findMany({
         where: { ...where, ...(q.status ? { status: q.status } : {}) },
