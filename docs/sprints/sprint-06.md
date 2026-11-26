@@ -1,6 +1,6 @@
 # Sprint 6 — Leave management
 
-Status: **Complete, awaiting owner approval** · Date: 2026-11-25 · Branch: `sprint-06/leave`
+Status: **Approved** · Date: 2026-11-25 · Branch: `sprint-06/leave`
 
 ## 1. Objectives
 Every company defines its own leave types and rules: nothing is hardcoded, and rules change over time without rewriting history. Balances are a ledger, so every day earned, taken, adjusted or expired is a row, and the balance is their sum. People apply, managers (and HR where required) approve, and approved leave shows up in attendance automatically.
@@ -132,4 +132,5 @@ README (leave in the worker schedule list), Swagger, this record.
 5. Policies → New rules from a date: the old version keeps applying before that date.
 
 ## 12. Approval
-Pending.
+
+Approved by the owner on 2026-11-26; merged to `main` through a pull request after CI passed.
