@@ -53,7 +53,11 @@ export function EmployeeNewPage() {
     mutationFn: () =>
       employeesApi.create(
         Object.fromEntries(
-          Object.entries(form).map(([k, v]) => [k, v === '' ? (k === 'firstName' ? '' : null) : v]),
+          Object.entries({
+            ...form,
+            // The default legal entity may not have reached the form yet if the list loaded slowly.
+            legalEntityId: form.legalEntityId || entities.data?.data[0]?.id || '',
+          }).map(([k, v]) => [k, v === '' ? (k === 'firstName' ? '' : null) : v]),
         ),
       ),
     onSuccess: (e) => navigate(`/employees/${e.id}`, { state: { created: true } }),
@@ -196,7 +200,7 @@ export function EmployeeNewPage() {
           ))}
         </SelectField>
         <div className="flex gap-2 sm:col-span-2">
-          <Button type="submit" disabled={create.isPending}>
+          <Button type="submit" disabled={create.isPending || entities.isPending}>
             {t('employees.create')}
           </Button>
           <Button variant="ghost" onClick={() => navigate('/employees')}>

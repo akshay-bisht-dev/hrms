@@ -4,7 +4,7 @@ Multi-tenant HRMS and remote workforce management SaaS for small and medium comp
 **JavaScript only:** React + Vite, Node.js + Express, Prisma + MySQL 8.4, Redis + BullMQ, and later an Electron desktop agent.
 
 - Planning and design: [`docs/`](docs) (Phases 1–5) · Sprint records: [`docs/sprints/`](docs/sprints)
-- Status: **Sprint 6 (Leave management)** complete. Sprint records: [`docs/sprints/`](docs/sprints).
+- Status: **Sprint 7 (Payroll core and India pack)** complete. Sprint records: [`docs/sprints/`](docs/sprints).
 
 ## Repository layout
 
@@ -14,7 +14,8 @@ apps/
   worker/       BullMQ processors and the job scheduler
   frontend/     React 19 + Vite SPA (Tailwind 4, shadcn/ui-style components in JSX)
 packages/
-  shared/       Code shared by all apps: IDs, permission catalog, queue names
+  shared/       Code shared by all apps: IDs, permission catalog, queue names, validation schemas
+  payroll/      Payroll engine (decimal.js, safe formulas) and country packs; statutory rates live in versioned rule data
 infrastructure/
   docker/       Dockerfiles, local MySQL init, local S3 config
   nginx/        SPA + API reverse proxy config
@@ -134,7 +135,13 @@ DATABASE_URL='mysql://hrms:hrms_dev_password@127.0.0.1:3306/hrms_test?allowPubli
 DATABASE_URL='mysql://hrms:hrms_dev_password@127.0.0.1:3306/hrms_test?allowPublicKeyRetrieval=true' npm run test:integration
 ```
 
-End-to-end tests in a real browser (needs the API, worker and frontend running, plus Mailpit from Docker Compose):
+End-to-end tests in a real browser (needs the API, worker and frontend running, plus Mailpit from Docker Compose). All journeys run in parallel from one IP address, so start the API with a higher per-IP sign-in limit for the run (the production default stays 60 a minute):
+
+```bash
+AUTH_IP_LIMIT_PER_MIN=300 npm run dev:backend
+```
+
+Then:
 
 ```bash
 npm run test:e2e
