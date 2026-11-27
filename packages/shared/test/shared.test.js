@@ -317,3 +317,20 @@ describe('employee schemas', () => {
     expect(ImportRow.safeParse({ firstName: 'A', dateOfJoining: '01/01/2026' }).success).toBe(false);
   });
 });
+
+describe('payroll percentage helpers never use floating point', () => {
+  test('percent ↔ fraction', async () => {
+    const { percentToFraction, fractionToPercent } = await import('../src/schemas/payroll.js');
+    expect(percentToFraction('50')).toBe('0.5');
+    expect(percentToFraction('12.5')).toBe('0.125');
+    expect(percentToFraction('8.33')).toBe('0.0833');
+    expect(percentToFraction('0')).toBe('0');
+    expect(percentToFraction('100')).toBe('1');
+    expect(percentToFraction('abc')).toBeNull();
+    expect(fractionToPercent('0.5')).toBe('50');
+    expect(fractionToPercent('0.125000')).toBe('12.5');
+    expect(fractionToPercent('0.0833')).toBe('8.33');
+    expect(fractionToPercent('1')).toBe('100');
+    expect(fractionToPercent(null)).toBe('');
+  });
+});

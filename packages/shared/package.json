@@ -15,6 +15,7 @@
     "./schemas/employee": "./src/schemas/employee.js",
     "./schemas/attendance": "./src/schemas/attendance.js",
     "./schemas/leave": "./src/schemas/leave.js",
+    "./schemas/payroll": "./src/schemas/payroll.js",
     "./quantity": "./src/quantity.js"
   },
   "scripts": {

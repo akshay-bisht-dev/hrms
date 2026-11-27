@@ -21,6 +21,7 @@ model LegalEntity {
   employees               Employee[]
   overtimeRules           OvertimeRule[]
   attendancePolicies      AttendancePolicy[]
+  payrollSettings         PayrollSetting[]
   leavePolicies           LeavePolicy[]
   salaryStructures        SalaryStructure[]
   tenantStatutorySettings TenantStatutorySetting[]

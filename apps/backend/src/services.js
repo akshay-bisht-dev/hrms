@@ -12,6 +12,8 @@ import { createEmployeesService } from './modules/employees/employees.service.js
 import { createImportsService } from './modules/employees/imports.js';
 import { createAttendanceService } from './modules/attendance/attendance.service.js';
 import { createLeaveService } from './modules/leave/leave.service.js';
+import { createPayrollConfigService } from './modules/payroll/config.service.js';
+import { createPayrollRunService } from './modules/payroll/run.service.js';
 
 /**
  * Builds module services from infrastructure clients. Shared by server.js and the integration tests,
@@ -44,6 +46,14 @@ export function buildServices({ env, logger, redis, queues, breachCheck, files }
   const members = createMembersService({ env, auth, redis, queues, employees });
   const attendance = createAttendanceService({ queues });
   const leave = createLeaveService({ attendance, queues });
+  const payrollConfig = createPayrollConfigService();
+  const payrollRuns = createPayrollRunService({
+    config: payrollConfig,
+    cipher,
+    files: files_,
+    buckets,
+    queues,
+  });
   return {
     jwt,
     auth,
@@ -52,6 +62,8 @@ export function buildServices({ env, logger, redis, queues, breachCheck, files }
     imports,
     attendance,
     leave,
+    payrollConfig,
+    payrollRuns,
     files: files_,
     access: accessControl,
     routes: {
@@ -69,6 +81,7 @@ export function buildServices({ env, logger, redis, queues, breachCheck, files }
       employeesRoutes: { access: accessControl, employees, imports },
       attendanceRoutes: { access: accessControl, attendance },
       leaveRoutes: { access: accessControl, leave },
+      payrollRoutes: { access: accessControl, config: payrollConfig, runs: payrollRuns },
     },
   };
 }

@@ -35,6 +35,7 @@ model Tenant {
   shifts                Shift[]
   overtimeRules         OvertimeRule[]
   attendancePolicies    AttendancePolicy[]
+  payrollSettings       PayrollSetting[]
   leaveTypes            LeaveType[]
   salaryComponents      SalaryComponent[]
   jobRequisitions       JobRequisition[]
