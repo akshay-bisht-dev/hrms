@@ -15,7 +15,8 @@ import {
   ymdToDate,
   zonedTime,
 } from '../../lib/time.js';
-import { employeeScope } from '../employees/scope.js';
+import { toCenti } from '@hrms/shared/quantity';
+import { anyOf, employeeScope } from '../employees/scope.js';
 import { DEFAULT_POLICY, MAX_SESSION_HOURS, computeDay, resolvePlan } from './engine.js';
 
 const ctx = () => /** @type {any} */ (currentContext());
@@ -184,7 +185,7 @@ export function createAttendanceService({ queues, now = () => new Date() } = {})
     if (existing?.isLocked) return existing;
 
     const ws = weekStart(ymd, emp.legalEntity?.weekStartDay ?? 1);
-    const [plan, policy, rule, punches, week] = await Promise.all([
+    const [plan, policy, rule, punches, week, leaveDays] = await Promise.all([
       planFor(emp, ymd),
       policyFor(emp.legalEntityId),
       overtimeRuleFor(emp, ymd),
@@ -198,6 +199,10 @@ export function createAttendanceService({ queues, now = () => new Date() } = {})
             _sum: { workedMinutes: true },
           })
         : null,
+      db().leaveRequestDay.findMany({
+        where: { date: workDate, request: { employeeId: emp.id, status: 'APPROVED' } },
+        select: { quantity: true },
+      }),
     ]);
     const t = now();
     const result = computeDay({
@@ -209,6 +214,10 @@ export function createAttendanceService({ queues, now = () => new Date() } = {})
       overtimeRule: rule,
       weekWorkedBefore: week?._sum.workedMinutes ?? 0,
       now: t,
+      leaveCenti: Math.min(
+        100,
+        leaveDays.reduce((s, d) => s + toCenti(String(d.quantity)), 0),
+      ),
     });
 
     // A decision stays valid only for the minutes it was made on.
@@ -315,7 +324,7 @@ export function createAttendanceService({ queues, now = () => new Date() } = {})
     if (ctx().permissions?.has('attendance.regularization.approve'))
       or.push(await employeeScope('attendance.regularization.approve'));
     if (!or.length) return null;
-    return { OR: or, ...(myId ? { id: { not: myId } } : {}) };
+    return { ...anyOf(or), ...(myId ? { id: { not: myId } } : {}) };
   }
 
   /** @param {string} employeeId */
@@ -676,10 +685,11 @@ export function createAttendanceService({ queues, now = () => new Date() } = {})
         const scoped = await approvableEmployees();
         const or = [
           ...(steps.length ? [{ id: { in: steps.map((s) => s.entityId) } }] : []),
-          ...(scoped ? [{ employee: scoped }] : []),
+          // An empty filter means everyone (company scope); `{ employee: {} }` would match nothing inside OR.
+          ...(scoped ? [Object.keys(scoped).length ? { employee: scoped } : {}] : []),
         ];
         if (!or.length) return [];
-        where = { OR: or, ...(myId ? { employeeId: { not: myId } } : {}) };
+        where = { ...anyOf(or), ...(myId ? { employeeId: { not: myId } } : {}) };
       }
       const rows = await db().attendanceRegularization.findMany({
         where: { ...where, ...(q.status ? { status: q.status } : {}) },

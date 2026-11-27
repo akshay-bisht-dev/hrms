@@ -24,6 +24,12 @@ function setup() {
         return { employees: 3, days: 9 };
       },
     },
+    leave: {
+      runAccruals: async (month) => {
+        calls.push(['accrual', currentContext().tenantId, month]);
+        return { employees: 2, credited: 2, expired: 0 };
+      },
+    },
     employees: {
       applyDueChanges: async () => {
         calls.push(['apply', currentContext().tenantId]);
@@ -64,10 +70,17 @@ test('tenant jobs run inside that tenant context', async () => {
     job('attendance-recalculate', { tenantId: T2, userId: U, from: '2026-11-01', to: '2026-11-07' }),
   );
   await process(job('employment-apply-due-tenant', { tenantId: T1 }));
+  expect(await process(job('leave-accrual-tenant', { tenantId: T2 }))).toMatchObject({
+    month: '2026-11',
+    credited: 2,
+  });
+  await process(job('leave-accrual-tenant', { tenantId: T1, month: '2026-10' }));
   expect(calls).toEqual([
     ['rollup', T1, null, null],
     ['rollup', T2, U, { from: '2026-11-01', to: '2026-11-07', employeeIds: undefined }],
     ['apply', T1],
+    ['accrual', T2, '2026-11'],
+    ['accrual', T1, '2026-10'],
   ]);
 });
 

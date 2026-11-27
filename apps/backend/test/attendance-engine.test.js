@@ -390,6 +390,21 @@ describe('daily calculation', () => {
     expect(d.flags).toEqual(['CORRECTED']);
   });
 
+  test('approved full-day leave makes the day ON_LEAVE, even before it closes, with no late or absence', () => {
+    expect(run([], { leaveCenti: 100 })).toMatchObject({ status: 'ON_LEAVE', flags: ['ON_LEAVE'] });
+    expect(run([], { leaveCenti: 100, now: at('08:00') }).status).toBe('ON_LEAVE');
+    // Leave on a weekend changes nothing.
+    const weekend = resolvePlan({ workDate: '2026-11-28', shift: SHIFT, weekendDays: WEEKEND });
+    expect(run([], { leaveCenti: 100, plan: weekend }).status).toBe('WEEKEND');
+  });
+
+  test('half-day leave: the worked half is measured against half the planned time; no late flag', () => {
+    // Afternoon at work after a morning off: 13:30–18:00 = 270 min, more than 75% of 240.
+    const d = run([punch('IN', at('13:30')), punch('OUT', at('18:00'))], { leaveCenti: 50 });
+    expect(d).toMatchObject({ status: 'PRESENT', lateMinutes: 0, flags: ['ON_LEAVE_HALF'] });
+    expect(run([], { leaveCenti: 50 }).status).toBe('ABSENT'); // the other half was missed
+  });
+
   test('mostly remote time is reported as WFH', () => {
     const d = run([
       punch('IN', at('09:00'), { locationType: 'WFH', workLocationId: 'home' }),

@@ -28,6 +28,14 @@ export const SCHEDULES = [
     name: 'employment-apply-due',
     data: {},
   },
+  // Leave accruals and year-end expiry for the current month (idempotent per period key), every 6 hours.
+  {
+    queue: QUEUES.WORK_SESSIONS,
+    id: 'leave-accrual',
+    every: 6 * 60 * 60_000,
+    name: 'leave-accrual',
+    data: {},
+  },
 ];
 
 const config = loadWorkerConfig(process.env);

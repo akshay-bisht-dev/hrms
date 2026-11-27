@@ -23,7 +23,12 @@
     "teamAttendance": "Team attendance",
     "approvals": "Approvals",
     "attendanceReports": "Reports",
-    "attendanceSettings": "Attendance"
+    "attendanceSettings": "Attendance",
+    "leave": "Leave",
+    "myLeave": "My leave",
+    "whosAway": "Who's away",
+    "leaveReports": "Leave report",
+    "leaveSettings": "Leave"
   },
   "status": {
     "title": "System status",
@@ -559,7 +564,9 @@
       "LATE": "Late",
       "EARLY_LEAVE": "Left early",
       "OVERTIME": "Overtime",
-      "WORKED_ON_REST_DAY": "Worked on a rest day"
+      "WORKED_ON_REST_DAY": "Worked on a rest day",
+      "ON_LEAVE": "On leave",
+      "ON_LEAVE_HALF": "Half-day leave"
     },
     "request": {
       "PENDING": "Waiting",
@@ -625,7 +632,7 @@
   },
   "approvals": {
     "title": "Approvals",
-    "subtitle": "Corrections and overtime from your team that are waiting for you.",
+    "subtitle": "Leave, corrections and overtime from your team that are waiting for you.",
     "corrections": "Attendance corrections",
     "overtime": "Overtime",
     "none": "Nothing is waiting for you.",
@@ -639,7 +646,11 @@
     "comment": "Note for {{what}}",
     "commentPlaceholder": "Note (needed to reject)",
     "rejectNeedsNote": "Add a note to reject",
-    "nothingRecorded": "nothing recorded"
+    "nothingRecorded": "nothing recorded",
+    "leave": "Leave requests",
+    "afternoon": "afternoon",
+    "morning": "morning",
+    "documentAttached": "Supporting document attached"
   },
   "attReport": {
     "title": "Attendance report",
@@ -765,6 +776,184 @@
       "to": "To",
       "submit": "Recalculate",
       "queued": "Recalculation started. Days update within a few minutes."
+    }
+  },
+  "leave": {
+    "title": "My leave",
+    "subtitle": "Your balances and requests. Days are counted from your work schedule, weekends and holidays.",
+    "noRecord": "Your sign-in is not linked to an employee record yet, so there is no leave to show. Ask HR to link it.",
+    "noPolicies": "No leave policy applies to you yet. HR sets these up in Settings → Leave.",
+    "apply": "Apply for leave",
+    "balances": "Balances",
+    "unpaid": "Unpaid",
+    "daysAvailable": "days available",
+    "balanceLine": "Balance {{balance}} · waiting {{pending}} · used this year {{used}}",
+    "unpaidLine": "Used this year: {{used}} days",
+    "myRequests": "My requests",
+    "noRequests": "You have not asked for any leave yet.",
+    "cancel": "Cancel",
+    "daysCount_one": "{{n}} day",
+    "daysCount_other": "{{n}} days",
+    "stepOf": "Approval step {{step}} of {{total}}",
+    "status": {
+      "PENDING": "Waiting",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "CANCELLED": "Cancelled"
+    },
+    "form": {
+      "title": "Apply for leave",
+      "type": "Leave type",
+      "from": "First day",
+      "to": "Last day",
+      "fromHalf": "Start at midday (afternoon only)",
+      "toHalf": "End at midday (morning only)",
+      "halfDayOnly": "Half day only",
+      "reason": "Reason (optional)",
+      "document": "Supporting document (needed for more than {{days}} days)",
+      "preview": "This takes {{quantity}} days. Available now: {{available}}.",
+      "twoLevels": "It needs your manager and then HR to approve.",
+      "submit": "Send for approval"
+    }
+  },
+  "whosAway": {
+    "title": "Who's away",
+    "subtitle": "Approved and waiting leave for everyone you can see.",
+    "empty": "Nobody is away this month."
+  },
+  "leaveReport": {
+    "title": "Leave report",
+    "subtitle": "Leave taken in the period and current balance, per person.",
+    "takenBalance": "taken / balance"
+  },
+  "leaveSettings": {
+    "title": "Leave settings",
+    "subtitle": "Leave types, policies and who they apply to, balances and accruals.",
+    "yes": "Yes",
+    "no": "No",
+    "perYear": "days a year",
+    "tabs": {
+      "types": "Leave types",
+      "policies": "Policies",
+      "assignments": "Assignments",
+      "balances": "Balances",
+      "accruals": "Accruals"
+    },
+    "starter": {
+      "title": "Starter leave types",
+      "help": "Adds annual, sick and unpaid leave with company-wide policies from 1 January. Review the numbers against local law.",
+      "load": "Load starter types",
+      "done": "Added: {{list}}.",
+      "none": "All starter types already exist."
+    },
+    "type": {
+      "empty": "No leave types yet.",
+      "name": "Name",
+      "code": "Code",
+      "paid": "Paid",
+      "document": "Document",
+      "after": "after {{n}} days",
+      "negative": "Allow a negative balance",
+      "documentDays": "Need a document for more than (days)",
+      "color": "Colour"
+    },
+    "rules": {
+      "method": "How leave is earned",
+      "methods": {
+        "MONTHLY": "Monthly",
+        "ANNUAL_UPFRONT": "All at the start of the year",
+        "NONE": "Not earned (adjustments only)"
+      },
+      "daysPerYear": "Days per year",
+      "carryForward": "Carry forward at most (days)",
+      "carryForwardHint": "Empty: keep everything. 0: nothing carries over.",
+      "maxBalance": "Maximum balance (days)",
+      "emptyNoLimit": "Empty: no limit",
+      "yearStartMonth": "Leave year starts in month (1–12)",
+      "minNotice": "Apply at least (days ahead)",
+      "maxConsecutive": "At most (days in one request)",
+      "minTenure": "Available after (days employed)",
+      "approvalLevels": "Approval",
+      "levels1": "Manager",
+      "levels2": "Manager, then HR",
+      "prorateForJoiners": "Prorate for people who join during the year",
+      "allowHalfDay": "Allow half days",
+      "countWeekends": "Count weekends",
+      "countHolidays": "Count public holidays",
+      "sandwich": "Count rest days between two leave days (sandwich rule)"
+    },
+    "policy": {
+      "help": "Rules are versioned: new rules start from a date and the old version keeps applying before it.",
+      "empty": "No policies yet.",
+      "new": "New policy",
+      "versionOf": "New rules for {{name}}",
+      "formTitle": "Policy",
+      "name": "Name",
+      "type": "Leave type",
+      "entity": "Legal entity",
+      "from": "From",
+      "newVersion": "New rules from a date"
+    },
+    "assign": {
+      "title": "Assign a policy",
+      "help": "The most specific assignment wins: person, then department, branch, legal entity, company.",
+      "policy": "Policy",
+      "appliesTo": "Applies to",
+      "target": "Which",
+      "submit": "Assign",
+      "current": "Assignments",
+      "empty": "No assignments yet.",
+      "remove": "Remove assignment of {{name}}",
+      "targets": {
+        "COMPANY": "Whole company",
+        "LEGAL_ENTITY": "Legal entity",
+        "BRANCH": "Branch",
+        "DEPARTMENT": "Department",
+        "EMPLOYEE": "One person"
+      }
+    },
+    "balance": {
+      "pick": "Choose a person",
+      "title": "Balances for {{name}}",
+      "pending": "{{n}} waiting",
+      "adjust": "Opening balance or adjustment",
+      "adjustHelp": "Entries are never edited or deleted. To fix a mistake, post another adjustment.",
+      "kind": "Entry",
+      "kinds": {
+        "ADJUSTMENT": "Adjustment",
+        "OPENING_BALANCE": "Opening balance (once per type)"
+      },
+      "quantity": "Days",
+      "quantityHint": "Negative to deduct, e.g. -0.5",
+      "postedOn": "Date",
+      "note": "Reason",
+      "post": "Post entry",
+      "saved": "Saved. New balance: {{balance}} days.",
+      "ledger": "Ledger",
+      "noEntries": "No entries yet.",
+      "col": {
+        "date": "Date",
+        "type": "Type",
+        "entry": "Entry",
+        "quantity": "Days",
+        "balance": "Balance",
+        "note": "Note"
+      },
+      "entries": {
+        "OPENING_BALANCE": "Opening balance",
+        "ACCRUAL": "Accrual",
+        "ADJUSTMENT": "Adjustment",
+        "CONSUMPTION": "Leave taken",
+        "REVERSAL": "Reversed",
+        "CARRY_FORWARD": "Carried forward",
+        "EXPIRY": "Expired",
+        "ENCASHMENT": "Encashed"
+      }
+    },
+    "accruals": {
+      "help": "Accruals run automatically every 6 hours for the current month, and the year-end carry-forward runs in the first month of a new leave year. Running a month again never credits twice.",
+      "run": "Run for this month",
+      "queued": "Accruals for {{month}} started. Balances update within a minute."
     }
   }
 }

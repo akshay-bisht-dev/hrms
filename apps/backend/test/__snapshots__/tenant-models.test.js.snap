@@ -16,7 +16,6 @@ exports[`tenant model guard (TEN-04) tenant models with an id that lack UNIQUE(t
   "DeviceSession",
   "EmergencyContact",
   "EmployeeBankAccount",
-  "EmployeeDocument",
   "EmploymentRecord",
   "FeedbackRequest",
   "FnfSettlement",

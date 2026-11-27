@@ -25,6 +25,10 @@ import { EmployeeAttendancePage } from '@/pages/attendance/EmployeeAttendancePag
 import { ApprovalsPage } from '@/pages/attendance/ApprovalsPage';
 import { AttendanceReportPage } from '@/pages/attendance/AttendanceReportPage';
 import { AttendanceSettingsPage } from '@/pages/settings/AttendanceSettingsPage';
+import { MyLeavePage } from '@/pages/leave/MyLeavePage';
+import { WhosAwayPage } from '@/pages/leave/WhosAwayPage';
+import { LeaveReportPage } from '@/pages/leave/LeaveReportPage';
+import { LeaveSettingsPage } from '@/pages/settings/LeaveSettingsPage';
 
 /** Route table. Each sprint adds its module routes under the signed-in shell. */
 export const routes = [
@@ -62,6 +66,10 @@ export const routes = [
           { path: 'attendance/approvals', element: <ApprovalsPage /> },
           { path: 'attendance/reports', element: <AttendanceReportPage /> },
           { path: 'settings/attendance', element: <AttendanceSettingsPage /> },
+          { path: 'leave', element: <MyLeavePage /> },
+          { path: 'leave/calendar', element: <WhosAwayPage /> },
+          { path: 'leave/reports', element: <LeaveReportPage /> },
+          { path: 'settings/leave', element: <LeaveSettingsPage /> },
           { path: 'settings/security', element: <SecurityPage /> },
           { path: 'settings/company', element: <CompanyPage /> },
           { path: 'settings/organization', element: <OrganizationPage /> },

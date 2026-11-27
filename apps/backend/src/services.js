@@ -11,6 +11,7 @@ import { createS3, storage } from './lib/storage.js';
 import { createEmployeesService } from './modules/employees/employees.service.js';
 import { createImportsService } from './modules/employees/imports.js';
 import { createAttendanceService } from './modules/attendance/attendance.service.js';
+import { createLeaveService } from './modules/leave/leave.service.js';
 
 /**
  * Builds module services from infrastructure clients. Shared by server.js and the integration tests,
@@ -42,6 +43,7 @@ export function buildServices({ env, logger, redis, queues, breachCheck, files }
   const imports = createImportsService({ employees, files: files_, buckets, queues });
   const members = createMembersService({ env, auth, redis, queues, employees });
   const attendance = createAttendanceService({ queues });
+  const leave = createLeaveService({ attendance, queues });
   return {
     jwt,
     auth,
@@ -49,6 +51,7 @@ export function buildServices({ env, logger, redis, queues, breachCheck, files }
     employees,
     imports,
     attendance,
+    leave,
     files: files_,
     access: accessControl,
     routes: {
@@ -65,6 +68,7 @@ export function buildServices({ env, logger, redis, queues, breachCheck, files }
       membersRoutes: { access: accessControl, members, employees },
       employeesRoutes: { access: accessControl, employees, imports },
       attendanceRoutes: { access: accessControl, attendance },
+      leaveRoutes: { access: accessControl, leave },
     },
   };
 }

@@ -268,6 +268,9 @@ describe('daily calculation for a fixed week', () => {
 
   test('overtime goes to the direct manager; never to the person themselves or an outsider', async () => {
     const pending = (await manager.call('get', '/attendance/overtime').expect(200)).body.data;
+    expect(
+      (await owner.call('get', '/attendance/overtime').expect(200)).body.data.map((p) => p.employee.id),
+    ).toContain(emp.id);
     const mon = pending.find((p) => p.workDate === MON);
     expect(mon).toMatchObject({ overtimeMinutes: 100, employee: { id: emp.id } });
     expect((await outsider.call('get', '/attendance/overtime').expect(200)).body.data).toEqual([]);
@@ -348,6 +351,11 @@ describe('corrections', () => {
       await manager.call('get', '/attendance/regularizations?view=approvals&status=PENDING').expect(200)
     ).body.data;
     expect(inbox.map((r) => r.id)).toContain(request.id);
+    // HR with company-wide approval scope (and no employee record) sees it too.
+    const hrInbox = (
+      await owner.call('get', '/attendance/regularizations?view=approvals&status=PENDING').expect(200)
+    ).body.data;
+    expect(hrInbox.map((r) => r.id)).toContain(request.id);
     expect(
       (await outsider.call('get', '/attendance/regularizations?view=approvals').expect(200)).body.data,
     ).toEqual([]);

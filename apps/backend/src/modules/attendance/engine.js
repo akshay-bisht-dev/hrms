@@ -166,8 +166,19 @@ const minutes = (/** @type {number} */ ms) => Math.floor(ms / 60_000);
  * @param {OvertimeRule | null} input.overtimeRule
  * @param {number} [input.weekWorkedBefore] minutes worked earlier in the same week (for weekly overtime)
  * @param {Date} input.now
+ * @param {number} [input.leaveCenti] approved leave on this day in hundredths (100 = full day, 50 = half day)
  */
-export function computeDay({ workDate, tz, plan, punches, policy, overtimeRule, weekWorkedBefore = 0, now }) {
+export function computeDay({
+  workDate,
+  tz,
+  plan,
+  punches,
+  policy,
+  overtimeRule,
+  weekWorkedBefore = 0,
+  now,
+  leaveCenti = 0,
+}) {
   const closed = now >= closesAt(workDate, tz, plan);
   const effective = effectivePunches(punches);
   const { pairs, open } = pairPunches(effective);
@@ -213,6 +224,13 @@ export function computeDay({ workDate, tz, plan, punches, policy, overtimeRule, 
     const diff = plan.endMin - at(lastOut);
     if (diff > plan.graceEarly) early = diff;
   }
+  // With approved leave on the day, part of it was never planned work, so arrival and departure times aren't judged.
+  const onLeave = plan.kind === 'WORKING' && leaveCenti > 0;
+  if (onLeave) {
+    late = 0;
+    early = 0;
+    flags.add(leaveCenti >= 100 ? 'ON_LEAVE' : 'ON_LEAVE_HALF');
+  }
   if (late) flags.add('LATE');
   if (early) flags.add('EARLY_LEAVE');
   if (closed && open) flags.add('MISSING_OUT');
@@ -239,13 +257,19 @@ export function computeDay({ workDate, tz, plan, punches, policy, overtimeRule, 
 
   /** @type {string} */
   let status;
+  // Half-day leave halves the time the present/half-day thresholds are measured against.
+  const expected =
+    plan.expectedMinutes && onLeave && leaveCenti < 100
+      ? Math.floor(plan.expectedMinutes / 2)
+      : plan.expectedMinutes;
   if (plan.kind === 'HOLIDAY') status = 'HOLIDAY';
   else if (plan.kind === 'WEEKEND') status = 'WEEKEND';
+  else if (onLeave && leaveCenti >= 100) status = 'ON_LEAVE';
   else if (!closed) status = 'PENDING';
   else if (worked === 0) status = 'ABSENT';
-  else if (!plan.expectedMinutes) status = 'PRESENT';
-  else if (worked * 100 >= plan.expectedMinutes * policy.presentPercent) status = 'PRESENT';
-  else if (worked * 100 >= plan.expectedMinutes * policy.halfDayPercent) status = 'HALF_DAY';
+  else if (!expected) status = 'PRESENT';
+  else if (worked * 100 >= expected * policy.presentPercent) status = 'PRESENT';
+  else if (worked * 100 >= expected * policy.halfDayPercent) status = 'HALF_DAY';
   else status = 'ABSENT';
 
   if (status === 'PRESENT') {

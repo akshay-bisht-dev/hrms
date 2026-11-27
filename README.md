@@ -4,7 +4,7 @@ Multi-tenant HRMS and remote workforce management SaaS for small and medium comp
 **JavaScript only:** React + Vite, Node.js + Express, Prisma + MySQL 8.4, Redis + BullMQ, and later an Electron desktop agent.
 
 - Planning and design: [`docs/`](docs) (Phases 1–5) · Sprint records: [`docs/sprints/`](docs/sprints)
-- Status: **Sprint 5 (Attendance, shifts, overtime and corrections)** complete. Sprint records: [`docs/sprints/`](docs/sprints).
+- Status: **Sprint 6 (Leave management)** complete. Sprint records: [`docs/sprints/`](docs/sprints).
 
 ## Repository layout
 
@@ -84,7 +84,7 @@ Start the background worker in a second terminal:
 npm run dev:worker
 ```
 
-Register the repeatable jobs (run once, or again after adding schedules). They include the attendance roll-up (every 30 minutes) and applying future-dated job changes (hourly):
+Register the repeatable jobs (run once, or again after adding schedules). They include the attendance roll-up (every 30 minutes), applying future-dated job changes (hourly) and leave accruals with year-end carry-forward (every 6 hours):
 
 ```bash
 npm run scheduler -w apps/worker

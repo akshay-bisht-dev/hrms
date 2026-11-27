@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Check, X } from 'lucide-react';
 import { attendanceApi, clock, hm } from '@/services/attendance';
+import { days, leaveApi } from '@/services/leave';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { errorMessage } from '@/utils/errors';
@@ -16,6 +17,7 @@ export function ApprovalsPage() {
         <h1 className="text-3xl font-bold">{t('approvals.title')}</h1>
         <p className="mt-1 text-sm text-text-muted">{t('approvals.subtitle')}</p>
       </header>
+      <LeaveRequests />
       <Corrections />
       <Overtime />
     </div>
@@ -23,7 +25,7 @@ export function ApprovalsPage() {
 }
 
 /** Approve / reject with an optional note (required when rejecting). */
-function DecisionControls({ onDecide, pending, label }) {
+export function DecisionControls({ onDecide, pending, label }) {
   const { t } = useTranslation();
   const [comment, setComment] = useState('');
   return (
@@ -176,6 +178,86 @@ function Overtime() {
             />
           </li>
         ))}
+      </ul>
+    </section>
+  );
+}
+
+function LeaveRequests() {
+  const { t, i18n } = useTranslation();
+  const qc = useQueryClient();
+  const [error, setError] = useState(null);
+  const list = useQuery({
+    queryKey: ['leave', 'requests', 'approvals'],
+    queryFn: () => leaveApi.requests({ view: 'approvals' }),
+  });
+  const decide = useMutation({
+    mutationFn: ({ id, body }) => leaveApi.decide(id, body),
+    onSuccess: () => {
+      setError(null);
+      qc.invalidateQueries({ queryKey: ['leave'] });
+    },
+    onError: (e) => setError(errorMessage(e, t)),
+  });
+  const fmt = (d) =>
+    new Intl.DateTimeFormat(i18n.language, {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      timeZone: 'UTC',
+    }).format(new Date(`${d}T00:00:00Z`));
+  const rows = list.data?.data ?? [];
+  return (
+    <section
+      aria-label={t('approvals.leave')}
+      className="rounded-[var(--radius-card)] border border-border bg-surface"
+    >
+      <h2 className="border-b border-border px-5 py-4 text-base font-semibold">
+        {t('approvals.leave')} <span className="tabular text-text-muted">{rows.length}</span>
+      </h2>
+      {error && (
+        <div className="px-5 pt-4">
+          <Alert tone="error">{error}</Alert>
+        </div>
+      )}
+      {list.isError && (
+        <div className="p-5">
+          <Alert tone="error">{errorMessage(list.error, t)}</Alert>
+        </div>
+      )}
+      {list.isSuccess && rows.length === 0 && (
+        <p className="p-5 text-sm text-text-muted">{t('approvals.none')}</p>
+      )}
+      <ul className="divide-y divide-slate-100">
+        {rows.map((r) => {
+          const label = `${r.employee.name} ${r.leaveType.name} ${r.fromDate}`;
+          return (
+            <li key={r.id} className="flex flex-col gap-3 px-5 py-4 text-sm">
+              <div className="flex flex-col gap-0.5">
+                <span className="font-medium">
+                  {r.employee.name} · {r.leaveType.name}
+                </span>
+                <span>
+                  {fmt(r.fromDate)}
+                  {r.fromHalfDay ? ` (${t('approvals.afternoon')})` : ''}
+                  {r.toDate !== r.fromDate ? ` – ${fmt(r.toDate)}` : ''}
+                  {r.toHalfDay ? ` (${t('approvals.morning')})` : ''} ·{' '}
+                  <strong>{t('leave.daysCount', { count: Number(r.quantity), n: days(r.quantity) })}</strong>
+                  {r.steps.length > 1
+                    ? ` · ${t('leave.stepOf', { step: r.currentStep, total: r.steps.length })}`
+                    : ''}
+                </span>
+                {r.reason && <span className="text-text-muted">“{r.reason}”</span>}
+                {r.documentId && <span className="text-text-muted">{t('approvals.documentAttached')}</span>}
+              </div>
+              <DecisionControls
+                label={label}
+                pending={decide.isPending}
+                onDecide={(body) => decide.mutate({ id: r.id, body })}
+              />
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

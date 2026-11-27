@@ -5,6 +5,8 @@ import {
   BarChart3,
   Building2,
   CalendarClock,
+  CalendarDays,
+  Plane,
   CheckSquare,
   Clock,
   Contact,
@@ -28,6 +30,8 @@ export function AppShell() {
   const { me, signOut, signedIn, can, scopeOf } = useAuth();
   const viewScope = scopeOf('attendance.view');
   const seesOthers = Boolean(viewScope && viewScope !== 'OWN');
+  const leaveScope = scopeOf('leave.request.view');
+  const seesTeamLeave = Boolean(leaveScope && leaveScope !== 'OWN');
   const qc = useQueryClient();
   const memberships = useQuery({
     queryKey: ['auth', 'memberships'],
@@ -123,6 +127,25 @@ export function AppShell() {
           </NavLink>
         )}
         <span className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-text-muted">
+          {t('nav.leave')}
+        </span>
+        <NavLink to="/leave" end className={link}>
+          <Plane aria-hidden="true" className="size-4" />
+          {t('nav.myLeave')}
+        </NavLink>
+        {seesTeamLeave && (
+          <NavLink to="/leave/calendar" className={link}>
+            <CalendarDays aria-hidden="true" className="size-4" />
+            {t('nav.whosAway')}
+          </NavLink>
+        )}
+        {seesTeamLeave && (
+          <NavLink to="/leave/reports" className={link}>
+            <BarChart3 aria-hidden="true" className="size-4" />
+            {t('nav.leaveReports')}
+          </NavLink>
+        )}
+        <span className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-text-muted">
           {t('nav.settings')}
         </span>
         <NavLink to="/settings/company" className={link}>
@@ -137,6 +160,12 @@ export function AppShell() {
           <NavLink to="/settings/attendance" className={link}>
             <CalendarClock aria-hidden="true" className="size-4" />
             {t('nav.attendanceSettings')}
+          </NavLink>
+        )}
+        {(can('leave.config.manage') || can('leave.balance.adjust')) && (
+          <NavLink to="/settings/leave" className={link}>
+            <Plane aria-hidden="true" className="size-4" />
+            {t('nav.leaveSettings')}
           </NavLink>
         )}
         {can('members.invite') && (

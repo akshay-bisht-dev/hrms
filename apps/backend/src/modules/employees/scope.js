@@ -40,5 +40,12 @@ export async function employeeScope(permission, { includeSelf = false } = {}) {
   }
 }
 
+/**
+ * Combines filters with OR. Prisma treats `{ OR: [{}] }` as matching nothing, so an empty filter (COMPANY scope,
+ * "everyone") must make the whole OR match everything instead.
+ * @param {object[]} filters
+ */
+export const anyOf = (filters) => (filters.some((f) => Object.keys(f).length === 0) ? {} : { OR: filters });
+
 /** True when the caller is the employee themselves. @param {string} employeeId */
 export const isSelf = (employeeId) => /** @type {any} */ (currentContext())?.employeeId === employeeId;

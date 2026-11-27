@@ -119,12 +119,16 @@ model LeaveRequest {
   totalQuantity    Decimal           @map("total_quantity") @db.Decimal(8, 2)
   reason           String?           @db.Text
   documentKey      String?           @map("document_key") @db.VarChar(500)
+  /// Supporting document (e.g. a medical certificate) from the employee's own documents.
+  documentId       String?           @map("document_id") @db.Char(36)
   status           RequestStatus     @default(PENDING)
+  decidedAt        DateTime?         @map("decided_at") @db.DateTime(3)
   cancelledAt      DateTime?         @map("cancelled_at") @db.DateTime(3)
   createdAt        DateTime          @default(now()) @map("created_at") @db.DateTime(3)
   updatedAt        DateTime          @updatedAt @map("updated_at") @db.DateTime(3)
   employee         Employee          @relation(fields: [tenantId, employeeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
   leaveType        LeaveType         @relation(fields: [tenantId, leaveTypeId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  document         EmployeeDocument? @relation(fields: [tenantId, documentId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
   leaveRequestDays LeaveRequestDay[]
 
   @@unique([tenantId, id])

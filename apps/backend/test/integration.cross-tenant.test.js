@@ -139,6 +139,20 @@ beforeAll(async () => {
   });
   ids.regularization = correction.id;
   ids.day = correction.day.id;
+  // Leave: starter types, a policy, an assignment, and a request by A's owner (linked to the employee above).
+  await A.call('post', '/leaves/starter-pack').expect(201);
+  const leaveTypes = (await A.call('get', '/leaves/types').expect(200)).body.data;
+  ids.leaveType = leaveTypes.find((t) => t.code === 'UNPAID').id;
+  ids.leavePolicy = (await A.call('get', '/leaves/policies?q=Unpaid').expect(200)).body.data[0].id;
+  ids.leaveAssignment = (await A.call('get', '/leaves/policy-assignments').expect(200)).body.data[0].id;
+  ids.leaveRequest = (
+    await post('/leaves/requests', {
+      leaveTypeId: ids.leaveType,
+      fromDate: '2030-01-07',
+      toDate: '2030-01-07',
+      reason: 'A trip',
+    })
+  ).id;
   ids.bRole = (await B.call('get', '/tenants/roles').expect(200)).body.data.find(
     (r) => r.systemKey === 'employee',
   ).id;
@@ -157,6 +171,17 @@ function fixtureFor(method, path) {
     [/^\/companies\/holiday-calendars\/:id$/, { id: ids.calendar }, { name: 'Pwned' }],
     [/^\/companies\/work-locations\/:id$/, { id: ids.workLocation }, { name: 'Pwned' }],
     [/^\/attendance\/shifts\/:id$/, { id: ids.shift }, { name: 'Pwned' }],
+    [/^\/leaves\/(balances|ledger)\/:id$/, { id: ids.employee }, undefined],
+    [/^\/leaves\/requests\/:id(\/cancel)?$/, { id: ids.leaveRequest }, {}],
+    [/^\/leaves\/requests\/:id\/decision$/, { id: ids.leaveRequest }, { decision: 'APPROVED' }],
+    [/^\/leaves\/types\/:id$/, { id: ids.leaveType }, { name: 'Pwned' }],
+    [/^\/leaves\/policies\/:id$/, { id: ids.leavePolicy }, { name: 'Pwned' }],
+    [
+      /^\/leaves\/policies\/:id\/versions$/,
+      { id: ids.leavePolicy },
+      { rules: { accrual: { method: 'NONE' } }, effectiveFrom: '2031-01-01' },
+    ],
+    [/^\/leaves\/policy-assignments\/:id$/, { id: ids.leaveAssignment }, undefined],
     [/^\/attendance\/overtime-rules\/:id$/, { id: ids.overtimeRule }, { name: 'Pwned' }],
     [/^\/attendance\/shift-assignments\/:id$/, { id: ids.assignment }, undefined],
     [/^\/attendance\/days\/:id$/, { id: ids.day }, undefined],
@@ -281,6 +306,13 @@ test("tenant B's lists never contain tenant A's records", async () => {
     '/attendance/shift-assignments',
     '/attendance/regularizations?view=approvals',
     '/attendance/overtime',
+    '/leaves/types',
+    '/leaves/policies',
+    '/leaves/policy-assignments',
+    '/leaves/requests?view=approvals',
+    '/leaves/requests?view=team',
+    '/leaves/calendar?from=2030-01-01&to=2030-01-31',
+    '/leaves/reports/summary?from=2030-01-01&to=2030-01-31',
     `/attendance/days?date=${new Date().toISOString().slice(0, 10)}`,
     `/attendance/reports/summary?from=2026-01-05&to=2026-03-31`,
   ];
@@ -325,6 +357,19 @@ test("tenant B cannot create records that point at tenant A's records", async ()
         ).body.id,
         employeeIds: [ids.employee],
         effectiveFrom: '2026-02-01',
+      },
+    ],
+    [
+      '/leaves/policy-assignments',
+      { policyId: ids.leavePolicy, appliesTo: 'COMPANY', effectiveFrom: '2030-01-01' },
+    ],
+    [
+      '/leaves/policies',
+      {
+        leaveTypeId: ids.leaveType,
+        name: 'X',
+        rules: { accrual: { method: 'NONE' } },
+        effectiveFrom: '2030-01-01',
       },
     ],
     [
@@ -385,6 +430,20 @@ test("tenant A's data is unchanged after all of that", async () => {
   ).toBe('PENDING');
   expect((await A.call('get', '/attendance/shift-assignments').expect(200)).body.data).toHaveLength(1);
   expect((await A.call('get', '/attendance/me/status').expect(200)).body.clockedIn).toBe(true);
+  expect((await A.call('get', `/leaves/requests/${ids.leaveRequest}`).expect(200)).body.status).toBe(
+    'PENDING',
+  );
+  expect((await A.call('get', `/leaves/types/${ids.leaveType}`).expect(200)).body.code).toBe('UNPAID');
+  // B's HR cannot adjust A's employee's balance either.
+  await B.call('post', '/leaves/adjustments')
+    .send({
+      employeeId: ids.employee,
+      leaveTypeId: ids.leaveType,
+      quantity: '5',
+      postedOn: '2030-01-01',
+      note: 'Pwned',
+    })
+    .expect(404);
 });
 
 test('every registered route is in the API docs', async () => {

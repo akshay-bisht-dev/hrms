@@ -373,6 +373,64 @@ await check(
   /check|constraint/i,
 );
 
+// Leave (Sprint 6) ---------------------------------------------------------------
+const lt = await db.leaveType.create({
+  data: { id: id(), tenantId: A.t.id, code: 'ANNUAL', name: 'Annual', updatedAt: new Date() },
+});
+const entry = await db.leaveLedgerEntry.create({
+  data: {
+    id: id(),
+    tenantId: A.t.id,
+    employeeId: A.emp.id,
+    leaveTypeId: lt.id,
+    entryType: 'ACCRUAL',
+    quantity: '1.67',
+    postedOn: new Date('2026-11-01T00:00:00Z'),
+    periodKey: 'ACC-2026-11',
+    sourceType: 'SCHEDULED',
+  },
+});
+await check(
+  'leave ledger entry edit blocked',
+  () => db.leaveLedgerEntry.update({ where: { id: entry.id }, data: { quantity: '99' } }),
+  /IMMUTABLE/,
+);
+await check(
+  'leave ledger entry delete blocked',
+  () => db.leaveLedgerEntry.delete({ where: { id: entry.id } }),
+  /IMMUTABLE/,
+);
+await check(
+  'second accrual for the same period blocked',
+  () =>
+    db.leaveLedgerEntry.create({
+      data: { ...entry, id: id(), createdAt: undefined },
+    }),
+  /Unique constraint/i,
+);
+await check('ledger quantities are exact decimals', async () => {
+  const sum = await db.leaveLedgerEntry.aggregate({
+    where: { leaveTypeId: lt.id },
+    _sum: { quantity: true },
+  });
+  if (String(sum._sum.quantity) !== '1.67') throw new Error(`got ${sum._sum.quantity}`);
+});
+await check(
+  'tenant B ledger entry cannot use tenant A leave type (composite FK)',
+  () =>
+    db.leaveLedgerEntry.create({
+      data: {
+        ...entry,
+        id: id(),
+        tenantId: B.t.id,
+        employeeId: B.emp.id,
+        periodKey: null,
+        createdAt: undefined,
+      },
+    }),
+  /Foreign key/i,
+);
+
 console.table(results);
 await db.$disconnect();
 process.exit(results.some((r) => r[1] !== 'pass') ? 1 : 0);
