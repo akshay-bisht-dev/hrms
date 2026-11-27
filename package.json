@@ -2,9 +2,10 @@
   "name": "hrms",
   "private": true,
   "type": "module",
-  "description": "Workforce HRMS — multi-tenant HR and remote workforce management SaaS (JavaScript only)",
+  "description": "Workforce HRMS \u2014 multi-tenant HR and remote workforce management SaaS (JavaScript only)",
   "workspaces": [
     "packages/shared",
+    "packages/payroll",
     "apps/backend",
     "apps/worker",
     "apps/frontend"

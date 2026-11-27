@@ -2,7 +2,9 @@
 // Usage: npm run db:seed   (reads DATABASE_URL from the environment or the repo-root .env)
 import { PrismaClient } from '@prisma/client';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
+import { createHash } from 'node:crypto';
 import { PERMISSIONS, newId } from '@hrms/shared';
+import { IN_RULES_2025_26 } from '@hrms/payroll/rules/in';
 
 if (!process.env.DATABASE_URL) {
   console.error('DATABASE_URL is not set');
@@ -38,7 +40,7 @@ const countries = [
     defaultCurrency: 'GBP',
     defaultLocale: 'en-GB',
     weekendDays: [0, 6],
-    payrollCoverage: 'NATIVE',
+    payrollCoverage: 'CONFIGURABLE', // no UK pack yet; NATIVE only once a reviewed pack exists
     nationalIdTypes: [{ type: 'NINO', pattern: '^[A-CEGHJ-PR-TW-Z]{2}[0-9]{6}[A-D]$' }],
     bankFieldFormat: { required: ['sortCode', 'accountNumber'] },
   },
@@ -141,12 +143,60 @@ async function main() {
     }
   }
 
+  // Statutory rule packs. A published version is immutable: changing rules means publishing a new version.
+  const STATUTORY = [
+    {
+      pack: { code: 'IN', countryCode: 'IN', name: 'India statutory payroll', engineModule: 'in' },
+      versions: [
+        {
+          version: 1,
+          effectiveFrom: '2025-04-01',
+          effectiveTo: null,
+          rules: IN_RULES_2025_26,
+          reviewedBy: null,
+        },
+      ],
+    },
+  ];
+  for (const { pack, versions } of STATUTORY) {
+    const saved = await db.statutoryRulePack.upsert({
+      where: { code: pack.code },
+      create: { id: newId(), ...pack },
+      update: { name: pack.name, engineModule: pack.engineModule },
+    });
+    for (const v of versions) {
+      const checksum = createHash('sha256').update(JSON.stringify(v.rules)).digest('hex');
+      const existing = await db.statutoryRuleVersion.findUnique({
+        where: { packId_version: { packId: saved.id, version: v.version } },
+      });
+      if (existing && existing.checksum !== checksum)
+        throw new Error(
+          `Statutory rules ${pack.code} v${v.version} were changed after publishing. Publish a new version instead.`,
+        );
+      if (!existing)
+        await db.statutoryRuleVersion.create({
+          data: {
+            id: newId(),
+            packId: saved.id,
+            version: v.version,
+            rules: v.rules,
+            effectiveFrom: new Date(`${v.effectiveFrom}T00:00:00Z`),
+            effectiveTo: v.effectiveTo ? new Date(`${v.effectiveTo}T00:00:00Z`) : null,
+            checksum,
+            reviewedBy: v.reviewedBy,
+            publishedAt: new Date(),
+          },
+        });
+    }
+  }
+
   const counts = {
     currencies: await db.currency.count(),
     countries: await db.countryProfile.count(),
     permissions: await db.permission.count(),
     plans: await db.plan.count(),
     planPrices: await db.planPrice.count(),
+    statutoryRuleVersions: await db.statutoryRuleVersion.count(),
   };
   console.log('Seed complete:', counts);
 }

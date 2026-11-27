@@ -1,0 +1,90 @@
+// @ts-check
+/**
+ * Starter salary structure for an Indian legal entity. Companies load it, then edit freely.
+ * Order matters: statutory amounts use the earnings above them, and SPECIAL balances the CTC after employer PF.
+ */
+export const IN_STARTER_COMPONENTS = Object.freeze([
+  {
+    code: 'BASIC',
+    name: 'Basic salary',
+    kind: 'EARNING',
+    calcType: 'PERCENTAGE',
+    percentOf: 'CTC',
+    rate: '0.50',
+    sequence: 10,
+  },
+  {
+    code: 'HRA',
+    name: 'House rent allowance',
+    kind: 'EARNING',
+    calcType: 'PERCENTAGE',
+    percentOf: 'BASIC',
+    rate: '0.50',
+    sequence: 20,
+  },
+  {
+    code: 'PF_ER',
+    name: 'Provident Fund (employer)',
+    kind: 'EMPLOYER_CONTRIBUTION',
+    calcType: 'STATUTORY',
+    statutoryKey: 'IN.PF.ER',
+    sequence: 30,
+  },
+  {
+    code: 'SPECIAL',
+    name: 'Special allowance',
+    kind: 'EARNING',
+    calcType: 'FORMULA',
+    formula: 'CTC_MONTHLY - BASIC - HRA - PF_ER',
+    sequence: 40,
+  },
+  { code: 'BONUS', name: 'Bonus / variable pay', kind: 'EARNING', calcType: 'INPUT', sequence: 50 },
+  {
+    code: 'REIMB',
+    name: 'Reimbursements',
+    kind: 'REIMBURSEMENT',
+    calcType: 'INPUT',
+    taxable: false,
+    sequence: 55,
+  },
+  {
+    code: 'PF_EE',
+    name: 'Provident Fund',
+    kind: 'DEDUCTION',
+    calcType: 'STATUTORY',
+    statutoryKey: 'IN.PF.EE',
+    sequence: 60,
+  },
+  {
+    code: 'ESI_EE',
+    name: 'ESI',
+    kind: 'DEDUCTION',
+    calcType: 'STATUTORY',
+    statutoryKey: 'IN.ESI.EE',
+    sequence: 70,
+  },
+  {
+    code: 'ESI_ER',
+    name: 'ESI (employer)',
+    kind: 'EMPLOYER_CONTRIBUTION',
+    calcType: 'STATUTORY',
+    statutoryKey: 'IN.ESI.ER',
+    sequence: 75,
+  },
+  {
+    code: 'PT',
+    name: 'Professional Tax',
+    kind: 'DEDUCTION',
+    calcType: 'STATUTORY',
+    statutoryKey: 'IN.PT',
+    sequence: 80,
+  },
+  {
+    code: 'TDS',
+    name: 'Income tax (TDS)',
+    kind: 'DEDUCTION',
+    calcType: 'STATUTORY',
+    statutoryKey: 'IN.TDS',
+    sequence: 90,
+  },
+]);
