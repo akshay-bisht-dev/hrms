@@ -66,6 +66,9 @@ doc('put', '/legal-entities/{id}/settings', 'Save payroll settings', {
   request: { params: IdParams, ...json(PayrollSettingsBody) },
 });
 doc('post', '/starter/in', 'Load the India starter components and structure', { request: json(LeBody) });
+doc('get', '/structures/{id}/components', 'A structure with its components in order', {
+  request: { params: IdParams },
+});
 doc('put', '/structures/{id}/components', "Set a structure's components and their order (checked)", {
   request: { params: IdParams, ...json(StructureComponentsBody) },
 });

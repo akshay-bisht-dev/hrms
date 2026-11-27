@@ -1,5 +1,13 @@
 // @ts-check
-import { calculatePay, IN_STARTER_COMPONENTS, PACKS, packFor, references, FormulaError } from '@hrms/payroll';
+import {
+  calculatePay,
+  dec,
+  IN_STARTER_COMPONENTS,
+  PACKS,
+  packFor,
+  references,
+  FormulaError,
+} from '@hrms/payroll';
 import { newId } from '@hrms/shared/ids';
 import { FORMULA_VARIABLES, InStatutorySettings } from '@hrms/shared/schemas/payroll';
 import { audit } from '../../lib/audit.js';
@@ -11,6 +19,8 @@ import { employeeScope } from '../employees/scope.js';
 
 const ctx = () => /** @type {any} */ (currentContext());
 const str = (/** @type {any} */ d) => (d === null || d === undefined ? null : String(d));
+/** Money in the storage format (four decimals), whatever form the database returns it in. */
+const money = (/** @type {any} */ d) => (d === null || d === undefined ? null : dec(String(d)).toFixed(4));
 const scoped = (/** @type {object} */ where, /** @type {object} */ scope) => ({ AND: [where, scope] });
 /** Pack-specific settings schemas. */
 const SETTINGS_SCHEMAS = { in: InStatutorySettings };
@@ -446,7 +456,7 @@ export function createPayrollConfigService({ now = () => new Date() } = {}) {
         id: r.id,
         structure: r.structure,
         currency: r.currency,
-        annualCtc: str(r.annualCtc),
+        annualCtc: money(r.annualCtc),
         payFrequency: r.payFrequency,
         effectiveFrom: dateToYmd(r.effectiveFrom),
         effectiveTo: dateToYmd(r.effectiveTo),

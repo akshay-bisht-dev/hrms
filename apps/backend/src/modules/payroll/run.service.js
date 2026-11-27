@@ -13,6 +13,8 @@ import { buildPayslipPdf } from './payslip-pdf.js';
 
 const ctx = () => /** @type {any} */ (currentContext());
 const str = (/** @type {any} */ d) => (d === null || d === undefined ? null : String(d));
+/** Money in the storage format (four decimals), whatever form the database returns it in. */
+const money = (/** @type {any} */ d) => (d === null || d === undefined ? null : dec(String(d)).toFixed(4));
 const fullName = (/** @type {any} */ e) => [e.firstName, e.lastName].filter(Boolean).join(' ');
 const MONTHS = [
   'January',
@@ -238,11 +240,11 @@ export function createPayrollRunService({ config, cipher, files, buckets, queues
     });
     const canonical = rows.map((r) => [
       r.employeeId,
-      str(r.gross),
-      str(r.deductions),
-      str(r.employerCost),
-      str(r.net),
-      r.payrollLines.map((l) => [l.code, l.kind, str(l.amount)]),
+      money(r.gross),
+      money(r.deductions),
+      money(r.employerCost),
+      money(r.net),
+      r.payrollLines.map((l) => [l.code, l.kind, money(l.amount)]),
     ]);
     return createHash('sha256').update(JSON.stringify(canonical)).digest('hex');
   }
@@ -342,7 +344,7 @@ export function createPayrollRunService({ config, cipher, files, buckets, queues
       });
       return rows.map((r) => ({
         id: r.id,
-        amount: str(r.amount),
+        amount: money(r.amount),
         note: r.note,
         component: r.component,
         employee: { id: r.employee.id, code: r.employee.employeeCode, name: fullName(r.employee) },
@@ -745,10 +747,10 @@ export function createPayrollRunService({ config, cipher, files, buckets, queues
         status: r.status,
         paidDays: str(r.paidDays),
         lopDays: str(r.lopDays),
-        gross: str(r.gross),
-        deductions: str(r.deductions),
-        employerCost: str(r.employerCost),
-        net: str(r.net),
+        gross: money(r.gross),
+        deductions: money(r.deductions),
+        employerCost: money(r.employerCost),
+        net: money(r.net),
         errors: /** @type {any} */ (r.errors)?.errors ?? [],
         days: /** @type {any} */ (r.errors)?.days ?? null,
       }));
@@ -772,16 +774,16 @@ export function createPayrollRunService({ config, cipher, files, buckets, queues
         paidDays: str(r.paidDays),
         lopDays: str(r.lopDays),
         totals: {
-          gross: str(r.gross),
-          deductions: str(r.deductions),
-          employerCost: str(r.employerCost),
-          net: str(r.net),
+          gross: money(r.gross),
+          deductions: money(r.deductions),
+          employerCost: money(r.employerCost),
+          net: money(r.net),
         },
         lines: r.payrollLines.map((l) => ({
           code: l.code,
           label: l.label,
           kind: l.kind,
-          amount: str(l.amount),
+          amount: money(l.amount),
           trace: l.calcTrace,
         })),
       };
@@ -862,7 +864,7 @@ export function createPayrollRunService({ config, cipher, files, buckets, queues
           'employerCost',
         ],
         rows: rows.map((r) => {
-          const by = new Map(r.payrollLines.map((l) => [l.code, str(l.amount)]));
+          const by = new Map(r.payrollLines.map((l) => [l.code, money(l.amount)]));
           return [
             r.employee.employeeCode,
             fullName(r.employee),
@@ -870,10 +872,10 @@ export function createPayrollRunService({ config, cipher, files, buckets, queues
             str(r.paidDays),
             str(r.lopDays),
             ...codes.map((c) => by.get(c) ?? ''),
-            str(r.gross),
-            str(r.deductions),
-            str(r.net),
-            str(r.employerCost),
+            money(r.gross),
+            money(r.deductions),
+            money(r.net),
+            money(r.employerCost),
           ];
         }),
       };
@@ -917,7 +919,7 @@ export function createPayrollRunService({ config, cipher, files, buckets, queues
           acct.accountHolder,
           cipher.decrypt(acct.accountNumberEnc, acct.id),
           fields.ifsc ?? fields.sortCode ?? fields.routingNumber ?? fields.iban ?? '',
-          str(r.net),
+          money(r.net),
           run.currency,
           `SALARY ${dateToYmd(run.period.startDate)?.slice(0, 7)} ${r.employee.employeeCode}`,
         ]);
@@ -1025,7 +1027,7 @@ export function createPayrollRunService({ config, cipher, files, buckets, queues
         id: p.id,
         month: dateToYmd(p.runEmployee.run.period.startDate)?.slice(0, 7),
         payDate: dateToYmd(p.runEmployee.run.period.payDate),
-        net: str(p.runEmployee.net),
+        net: money(p.runEmployee.net),
         currency: p.runEmployee.currency,
       }));
     },
