@@ -29,6 +29,10 @@ import { MyLeavePage } from '@/pages/leave/MyLeavePage';
 import { WhosAwayPage } from '@/pages/leave/WhosAwayPage';
 import { LeaveReportPage } from '@/pages/leave/LeaveReportPage';
 import { LeaveSettingsPage } from '@/pages/settings/LeaveSettingsPage';
+import { PayrollRunsPage } from '@/pages/payroll/PayrollRunsPage';
+import { PayrollRunPage } from '@/pages/payroll/PayrollRunPage';
+import { MyPayslipsPage } from '@/pages/payroll/MyPayslipsPage';
+import { PayrollSettingsPage } from '@/pages/settings/PayrollSettingsPage';
 
 /** Route table. Each sprint adds its module routes under the signed-in shell. */
 export const routes = [
@@ -70,6 +74,10 @@ export const routes = [
           { path: 'leave/calendar', element: <WhosAwayPage /> },
           { path: 'leave/reports', element: <LeaveReportPage /> },
           { path: 'settings/leave', element: <LeaveSettingsPage /> },
+          { path: 'payroll', element: <PayrollRunsPage /> },
+          { path: 'payroll/runs/:id', element: <PayrollRunPage /> },
+          { path: 'payslips', element: <MyPayslipsPage /> },
+          { path: 'settings/payroll', element: <PayrollSettingsPage /> },
           { path: 'settings/security', element: <SecurityPage /> },
           { path: 'settings/company', element: <CompanyPage /> },
           { path: 'settings/organization', element: <OrganizationPage /> },

@@ -82,8 +82,8 @@ const checkComponent = (/** @type {any} */ b, /** @type {z.RefinementCtx} */ ctx
   if (b.calcType === 'STATUTORY') need('statutoryKey', 'Choose the statutory item');
 };
 export const ComponentBody = ComponentShape.superRefine(checkComponent);
-/** Code and calculation type are fixed once created: history refers to them. */
-export const ComponentPatch = ComponentShape.omit({ code: true, calcType: true }).partial().strict();
+/** Code and calculation type may be sent but not changed once created (the API refuses a change): history refers to them. */
+export const ComponentPatch = ComponentShape.partial().strict();
 
 export const StructureBody = z
   .object({

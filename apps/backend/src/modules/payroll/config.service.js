@@ -201,8 +201,17 @@ export function createPayrollConfigService({ now = () => new Date() } = {}) {
       };
     },
 
-    /** Validates a component's formula or statutory key before it is saved. @param {any} body */
-    async checkComponent(body) {
+    /** Validates a component's formula or statutory key before it is saved. @param {any} body @param {string} [id] */
+    async checkComponent(body, id) {
+      if (id) {
+        const existing = await db().salaryComponent.findUnique({ where: { id } });
+        if (existing && body.code !== undefined && body.code !== existing.code)
+          throw new ValidationError([{ path: 'body.code', message: 'The code cannot change once created' }]);
+        if (existing && body.calcType !== undefined && body.calcType !== existing.calcType)
+          throw new ValidationError([
+            { path: 'body.calcType', message: 'The calculation type cannot change once created' },
+          ]);
+      }
       if (body.calcType === 'FORMULA' || body.formula) {
         try {
           references(String(body.formula));

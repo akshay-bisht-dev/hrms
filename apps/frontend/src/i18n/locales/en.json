@@ -28,7 +28,11 @@
     "myLeave": "My leave",
     "whosAway": "Who's away",
     "leaveReports": "Leave report",
-    "leaveSettings": "Leave"
+    "leaveSettings": "Leave",
+    "payroll": "Payroll",
+    "payslips": "My payslips",
+    "payrollRuns": "Payroll runs",
+    "payrollSettings": "Payroll"
   },
   "status": {
     "title": "System status",
@@ -420,7 +424,8 @@
       "job": "Job & history",
       "contacts": "Emergency contacts",
       "documents": "Documents",
-      "bank": "Bank details"
+      "bank": "Bank details",
+      "salary": "Salary"
     },
     "profile": {
       "save": "Save changes",
@@ -954,6 +959,229 @@
       "help": "Accruals run automatically every 6 hours for the current month, and the year-end carry-forward runs in the first month of a new leave year. Running a month again never credits twice.",
       "run": "Run for this month",
       "queued": "Accruals for {{month}} started. Balances update within a minute."
+    }
+  },
+  "payroll": {
+    "title": "Payroll",
+    "subtitle": "Monthly runs: lock inputs, calculate, review, approve, finalize and pay.",
+    "tabs": {
+      "runs": "Runs",
+      "declarations": "Tax declarations"
+    },
+    "newRun": "New run",
+    "legalEntity": "Legal entity",
+    "month": "Month",
+    "runs": "Runs",
+    "noRuns": "No payroll runs yet.",
+    "netTotal": "Net {{amount}}",
+    "runTitle": "Payroll for {{month}}",
+    "payDate": "Pay date {{date}}",
+    "progress": "Progress",
+    "status": {
+      "DRAFT": "Draft",
+      "INPUTS_LOCKED": "Inputs locked",
+      "CALCULATING": "Calculating",
+      "CALCULATED": "Calculated",
+      "REVIEWED": "Reviewed",
+      "APPROVED": "Approved",
+      "FINALIZED": "Finalized",
+      "PAID": "Paid",
+      "CANCELLED": "Cancelled"
+    },
+    "rulesPinned": "Calculated with the {{pack}} statutory rules, version {{version}}.",
+    "notReviewed": "These rules have not yet been reviewed by an in-country payroll expert.",
+    "calculating": "Calculating in the background. This page updates by itself.",
+    "failed": "The last calculation failed: {{message}}",
+    "hasErrors_one": "{{count}} employee has an error. Fix it and recalculate before reviewing.",
+    "hasErrors_other": "{{count}} employees have errors. Fix them and recalculate before reviewing.",
+    "makerChecker": "The person who reviewed this run cannot approve it. Someone else with approval rights has to.",
+    "actions": {
+      "lock": "Lock inputs",
+      "unlock": "Back to draft",
+      "calculate": "Calculate",
+      "recalculate": "Recalculate",
+      "review": "Mark reviewed",
+      "approve": "Approve",
+      "finalize": "Finalize",
+      "markPaid": "Mark paid",
+      "cancel": "Cancel run",
+      "reject": "Send back"
+    },
+    "rejectNote": "What needs fixing?",
+    "register": "Register (CSV)",
+    "bankFile": "Bank file (CSV)",
+    "totals": "Totals",
+    "total": {
+      "employees": "Calculated",
+      "gross": "Gross",
+      "deductions": "Deductions",
+      "net": "Net pay",
+      "employerCost": "Cost to company"
+    },
+    "inputs": "Inputs",
+    "inputsHelp": "Variable pay and reimbursements for this month. They can change only while the run is a draft.",
+    "employee": "Employee",
+    "component": "Component",
+    "amount": "Amount",
+    "removeInput": "Remove input for {{name}}",
+    "results": "Employees",
+    "col": {
+      "name": "Name",
+      "status": "Status",
+      "paidDays": "Paid days",
+      "gross": "Gross",
+      "deductions": "Deductions",
+      "net": "Net"
+    },
+    "rowStatus": {
+      "OK": "OK",
+      "WARNING": "Check",
+      "ERROR": "Error",
+      "EXCLUDED": "Not paid"
+    },
+    "lop": "{{days}} days loss of pay",
+    "how": "How",
+    "kind": {
+      "EARNING": "Earning",
+      "DEDUCTION": "Deduction",
+      "EMPLOYER_CONTRIBUTION": "Employer contribution",
+      "REIMBURSEMENT": "Reimbursement",
+      "INFORMATIONAL": "Information only"
+    },
+    "variance": "Change from last month",
+    "varianceTitle": "Change from {{month}}",
+    "noChanges": "No changes in net pay.",
+    "newThisPeriod": "New this month",
+    "notThisPeriod": "Not paid this month",
+    "declarationsToReview": "Declarations waiting for verification",
+    "verify": "Verify"
+  },
+  "payslips": {
+    "title": "My payslips",
+    "subtitle": "Download your payslips and tell payroll which tax regime to use.",
+    "none": "No payslips yet.",
+    "paidOn": "paid {{date}}",
+    "download": "Download",
+    "downloadFor": "Download payslip for {{month}}",
+    "declaration": "Tax declaration",
+    "declarationTitle": "Tax declaration {{fy}}",
+    "declarationHelp": "Choose your income-tax regime. Under the old regime, declared deductions count once payroll verifies them.",
+    "regimeLabel": "Tax regime",
+    "regime": {
+      "NEW": "New regime (default)",
+      "OLD": "Old regime"
+    },
+    "noDeductions": "no deductions",
+    "section": {
+      "80C": "Section 80C (PF, PPF, ELSS, insurance…)",
+      "80D": "Section 80D (health insurance)",
+      "80CCD1B": "Section 80CCD(1B) (NPS)",
+      "24B": "Section 24(b) (home loan interest)"
+    },
+    "submitDeclaration": "Submit for verification",
+    "declarationSaved": "Submitted. Payroll will verify it.",
+    "declStatus": {
+      "DRAFT": "Not submitted",
+      "SUBMITTED": "Waiting for verification",
+      "VERIFIED": "Verified",
+      "REJECTED": "Rejected"
+    }
+  },
+  "salary": {
+    "history": "Salary history",
+    "none": "No salary recorded yet.",
+    "ctcLine": "{{amount}} a year",
+    "change": "New salary from a date",
+    "structure": "Salary structure",
+    "noStructures": "No structures for this legal entity yet",
+    "annualCtc": "Annual CTC",
+    "from": "From",
+    "reason": "Reason",
+    "reasons": {
+      "JOINING": "Joining",
+      "REVISION": "Revision",
+      "PROMOTION": "Promotion",
+      "CORRECTION": "Correction"
+    },
+    "preview": "Monthly breakdown",
+    "netMonthly": "Net pay (full month)",
+    "save": "Save salary",
+    "saved": "Salary saved."
+  },
+  "paySettings": {
+    "title": "Payroll settings",
+    "subtitle": "Salary components, structures and statutory settings for each legal entity.",
+    "tabs": {
+      "components": "Components",
+      "structures": "Structures",
+      "statutory": "Statutory",
+      "settings": "Pay days"
+    },
+    "calc": {
+      "FIXED": "Fixed amount",
+      "PERCENTAGE": "Percentage",
+      "FORMULA": "Formula",
+      "STATUTORY": "Statutory",
+      "INPUT": "Entered each month"
+    },
+    "components": {
+      "help": "Building blocks of pay. Amounts are worked out in the order the structure lists them.",
+      "empty": "No components yet. Load the India starter from Structures, or add your own.",
+      "code": "Code",
+      "codeHint": "Used in formulas, e.g. BASIC",
+      "name": "Name",
+      "kind": "Kind",
+      "calc": "Calculation",
+      "ratePercent": "Rate (%)",
+      "ratePercentHint": "For percentages, e.g. 50",
+      "percentOf": "Percentage of",
+      "percentOfHint": "CTC or a component code",
+      "fixedAmount": "Monthly amount",
+      "formula": "Formula",
+      "formulaHint": "e.g. CTC_MONTHLY - BASIC - HRA",
+      "statutoryKey": "Statutory item",
+      "taxable": "Taxable"
+    },
+    "structures": {
+      "pick": "Structure",
+      "newName": "New structure name",
+      "loadStarter": "Load India starter",
+      "starterDone": "Loaded. {{count}} new components.",
+      "order": "Components in order",
+      "orderHelp": "A formula or statutory item can only use components above it.",
+      "up": "Move {{name}} up",
+      "down": "Move {{name}} down",
+      "remove": "Remove {{name}}",
+      "add": "Add a component",
+      "save": "Save structure"
+    },
+    "statutory": {
+      "title": "{{pack}} statutory rules, version {{version}}",
+      "notReviewed": "These rules are implemented and tested, but have not yet been reviewed by an in-country payroll expert. Check results before paying.",
+      "noPack": "There is no statutory pack for {{country}} yet. Use your own components (configurable mode).",
+      "pfEnabled": "Provident Fund applies",
+      "pfOnActualWages": "PF on actual wages (instead of up to the wage ceiling)",
+      "esiEnabled": "ESI applies",
+      "ptState": "Professional Tax state",
+      "noPt": "None",
+      "pfWageCodes": "PF wage components",
+      "pfWageCodesHint": "Comma separated, e.g. BASIC, DA",
+      "reg": {
+        "pf": "PF establishment code",
+        "esi": "ESI code",
+        "pt": "PT registration",
+        "tan": "TAN"
+      },
+      "from": "Applies from",
+      "save": "Save statutory settings"
+    },
+    "settings": {
+      "basis": "Paid days are counted on",
+      "calendar": "Calendar days of the month",
+      "fixed30": "30 days every month",
+      "payDay": "Pay day",
+      "payDayHint": "Empty: last day of the month",
+      "lopFromAbsence": "Absent days count as loss of pay (in addition to unpaid leave)"
     }
   }
 }

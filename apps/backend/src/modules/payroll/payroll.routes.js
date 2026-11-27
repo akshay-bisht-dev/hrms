@@ -203,8 +203,8 @@ export function payrollRouter({ access, config, runs }) {
     writeAccess: configure,
     searchFields: ['code', 'name'],
     orderBy: { displayOrder: 'asc' },
-    mapInput: async (b) => {
-      await config.checkComponent(b);
+    mapInput: async (b, { id }) => {
+      await config.checkComponent(b, id);
       return b;
     },
   });

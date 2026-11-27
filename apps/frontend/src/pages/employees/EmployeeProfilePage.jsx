@@ -15,6 +15,7 @@ import { errorMessage } from '@/utils/errors';
 import { cn } from '@/utils/cn';
 import { STATUS_TONE } from './EmployeesPage';
 import { useOrgList } from './EmployeeNewPage';
+import { SalaryTab } from './SalaryTab';
 
 const card = 'rounded-[var(--radius-card)] border border-border bg-surface p-5';
 const fieldErrors = (err, t) =>
@@ -819,6 +820,7 @@ export function EmployeeProfilePage() {
     'contacts',
     'documents',
     ...(self || can('payroll.bank.view') ? ['bank'] : []),
+    ...(can('payroll.salary.view') ? ['salary'] : []),
   ];
   return (
     <div className="flex flex-col gap-6">
@@ -873,6 +875,7 @@ export function EmployeeProfilePage() {
         />
       )}
       {tab === 'bank' && <BankTab e={e} canManage={can('payroll.bank.manage')} />}
+      {tab === 'salary' && <SalaryTab e={e} canManage={can('payroll.salary.manage')} />}
     </div>
   );
 }
