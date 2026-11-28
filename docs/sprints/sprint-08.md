@@ -1,6 +1,6 @@
 # Sprint 8 — Work Status: work from home, sessions, breaks and corrections
 
-Status: **Awaiting approval** · Date: 2026-11-28 · Branch: `sprint-08/work-status`
+Status: **Approved** · Date: 2026-11-28 · Branch: `sprint-08/work-status`
 
 ## 1. Objectives
 People can record a working day from anywhere using only the web app, with no desktop agent and no monitoring: work-from-home requests and approvals, work sessions with breaks, an honest record of disconnections, automatic closing of abandoned sessions, and corrections that never rewrite history. Managers see live work **status** only.
@@ -196,4 +196,4 @@ README (status and the work module), Swagger, this record.
 5. As HR with two-step verification: Work → Team status.
 
 ## 12. Approval
-Waiting for the owner's approval.
+Approved by the owner on 2026-11-28; merged to `main` through a pull request after CI passed.
