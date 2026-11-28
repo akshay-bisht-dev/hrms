@@ -3,8 +3,8 @@
  * Work Status (Sprint 8): work policies, work-from-home requests, work sessions with breaks and heartbeats,
  * an automatic sweeper for abandoned sessions, corrections, and the team's live status.
  *
- * What is recorded, and nothing more: when a session starts and ends, breaks, and that the My work page is still
- * open (a heartbeat about once a minute). No screenshots, keystrokes, applications, webcam or microphone. The
+ * What is recorded, and nothing more: when a session starts and ends, breaks, and that the app is still open in
+ * the browser (a heartbeat about once a minute, only while a session runs). No screenshots, keystrokes, applications, webcam or microphone. The
  * desktop agent and any monitoring arrive in later sprints, behind their own activation and acknowledgement.
  *
  * The event log (work_session_events, append-only) is the source of truth; the totals on work_sessions are
@@ -45,7 +45,7 @@ export const DISCLOSURE = Object.freeze({
   recorded: [
     'When you start and end a work session, and where you said you are working',
     'When your breaks start and end',
-    'That this page is open: a small signal about once a minute while a session runs',
+    'That this app is open in your browser: a small signal about once a minute, only while a session runs',
   ],
   notRecorded: [
     'Screenshots or your screen',
@@ -172,7 +172,12 @@ const correctionDto = (c) => ({
   sessionId: c.sessionId,
   employeeId: c.employeeId,
   employee: c.employee
-    ? { id: c.employee.id, code: c.employee.employeeCode, name: fullName(c.employee) }
+    ? {
+        id: c.employee.id,
+        code: c.employee.employeeCode,
+        name: fullName(c.employee),
+        timezone: c.employee.timezone,
+      }
     : undefined,
   session: c.session
     ? { workDate: dateToYmd(c.session.workDate), startedAt: c.session.startedAt, endedAt: c.session.endedAt }
@@ -1202,9 +1207,13 @@ export function createWorkService({ attendance, mfaEnforce = true, now = () => n
         where: { ...where, ...(q.status ? { status: /** @type {any} */ (q.status) } : {}) },
         orderBy: { fromDate: 'desc' },
         take: 200,
-        include: { workLocation: true, employee: { select: EMPLOYEE_SELECT } },
+        include: {
+          workLocation: true,
+          employee: { select: EMPLOYEE_SELECT },
+          _count: { select: { workSessions: true } },
+        },
       });
-      return rows.map((r) => ({ ...wfhDto(r), days: wfhDays(r).length }));
+      return rows.map((r) => ({ ...wfhDto(r), days: wfhDays(r).length, inUse: r._count.workSessions > 0 }));
     },
 
     /** @param {string} id @param {{ decision: 'APPROVED' | 'REJECTED', comment?: string }} d */

@@ -7,6 +7,7 @@ import { days, leaveApi } from '@/services/leave';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { errorMessage } from '@/utils/errors';
+import { WorkApprovals } from '@/pages/work/WorkApprovals';
 
 /** Corrections and overtime waiting for the viewer: their direct reports, plus anyone in their approval scope. */
 export function ApprovalsPage() {
@@ -20,6 +21,7 @@ export function ApprovalsPage() {
       <LeaveRequests />
       <Corrections />
       <Overtime />
+      <WorkApprovals DecisionControls={DecisionControls} />
     </div>
   );
 }

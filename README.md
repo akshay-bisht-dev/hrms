@@ -4,7 +4,7 @@ Multi-tenant HRMS and remote workforce management SaaS for small and medium comp
 **JavaScript only:** React + Vite, Node.js + Express, Prisma + MySQL 8.4, Redis + BullMQ, and later an Electron desktop agent.
 
 - Planning and design: [`docs/`](docs) (Phases 1–5) · Sprint records: [`docs/sprints/`](docs/sprints)
-- Status: **Sprint 7 (Payroll core and India pack)** complete. Sprint records: [`docs/sprints/`](docs/sprints).
+- Status: **Sprint 8 (Work Status: work from home, sessions, breaks, corrections)** complete, awaiting approval. Sprint records: [`docs/sprints/`](docs/sprints).
 
 ## Repository layout
 
@@ -85,7 +85,7 @@ Start the background worker in a second terminal:
 npm run dev:worker
 ```
 
-Register the repeatable jobs (run once, or again after adding schedules). They include the attendance roll-up (every 30 minutes), applying future-dated job changes (hourly) and leave accruals with year-end carry-forward (every 6 hours):
+Register the repeatable jobs (run once, or again after adding schedules). They include the work-session sweeper (every minute: marks silent sessions disconnected and closes abandoned ones at their last heartbeat), the attendance roll-up (every 30 minutes), applying future-dated job changes (hourly) and leave accruals with year-end carry-forward (every 6 hours):
 
 ```bash
 npm run scheduler -w apps/worker
@@ -187,5 +187,6 @@ docker build --secret id=extra_ca,src=/path/to/proxy-ca.pem -f infrastructure/do
 | `Invalid environment configuration: JWT_ACCESS_PRIVATE_KEY …`    | Run `npm run keys:dev -w apps/backend` once.                                                                                                                                                                                                                 |
 | E2E or manual sign-ins get "Too many attempts"                   | Per-IP and per-account limits work as designed. Locally, `docker compose exec redis redis-cli --scan --pattern 'rl:*' \| xargs docker compose exec -T redis redis-cli del`, or wait for the window to pass. `npm run test:e2e` clears them itself.           |
 | Past days show "Not recorded" in Team attendance                 | Day rows for people who didn't clock in are created by the roll-up job. Start the worker and run `npm run scheduler -w apps/worker` once. After changing shifts or rules, use Settings → Attendance → Recalculate.                                           |
+| A work session never shows "Disconnected" or never closes        | The sweeper runs in the worker. Start it and run `npm run scheduler -w apps/worker` once. The page sends a signal only while a work session runs.                                                                                                            |
 | Clock-in says "Your sign-in is not linked to an employee record" | Link the account in Settings → Members, or invite the person from their employee profile (_Invite to sign in_).                                                                                                                                              |
 | Jest says "did not exit one second after the test run"           | A test left a Redis or DB connection open. BullMQ does not close connections it is given; close them in `afterAll`.                                                                                                                                          |

@@ -24,6 +24,9 @@ import { TeamAttendancePage } from '@/pages/attendance/TeamAttendancePage';
 import { EmployeeAttendancePage } from '@/pages/attendance/EmployeeAttendancePage';
 import { ApprovalsPage } from '@/pages/attendance/ApprovalsPage';
 import { AttendanceReportPage } from '@/pages/attendance/AttendanceReportPage';
+import { MyWorkPage } from '@/pages/work/MyWorkPage';
+import { TeamWorkPage } from '@/pages/work/TeamWorkPage';
+import { WorkSettingsPage } from '@/pages/settings/WorkSettingsPage';
 import { AttendanceSettingsPage } from '@/pages/settings/AttendanceSettingsPage';
 import { MyLeavePage } from '@/pages/leave/MyLeavePage';
 import { WhosAwayPage } from '@/pages/leave/WhosAwayPage';
@@ -70,6 +73,9 @@ export const routes = [
           { path: 'attendance/approvals', element: <ApprovalsPage /> },
           { path: 'attendance/reports', element: <AttendanceReportPage /> },
           { path: 'settings/attendance', element: <AttendanceSettingsPage /> },
+          { path: 'work', element: <MyWorkPage /> },
+          { path: 'work/team', element: <TeamWorkPage /> },
+          { path: 'settings/work', element: <WorkSettingsPage /> },
           { path: 'leave', element: <MyLeavePage /> },
           { path: 'leave/calendar', element: <WhosAwayPage /> },
           { path: 'leave/reports', element: <LeaveReportPage /> },
