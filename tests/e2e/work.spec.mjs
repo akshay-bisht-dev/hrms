@@ -39,6 +39,7 @@ test('a work-from-home day without the desktop agent: request, approval, session
   request,
   browser,
 }) => {
+  test.setTimeout(120_000); // a whole working day across three people
   const stamp = Date.now();
   const owner = `e2e-wk-hr-${stamp}@example.com`;
   const company = `Work E2E ${stamp}`;
@@ -134,6 +135,15 @@ test('a work-from-home day without the desktop agent: request, approval, session
   await expect(inbox.getByText('Nothing is waiting for you.')).toBeVisible();
   // Team status needs two-step verification even for a team leader.
   await expect(m.page.getByRole('link', { name: 'Team status' })).toBeVisible();
+  // Maya sets Ravi a task that needs her approval.
+  await m.page.getByRole('link', { name: 'Tasks' }).click();
+  await m.page.getByRole('button', { name: 'New task' }).click();
+  const newTask = m.page.getByRole('region', { name: 'New task' });
+  await newTask.getByLabel('Title').fill('Update the onboarding checklist');
+  await newTask.getByLabel('Who does it').selectOption({ label: `Ravi Kumar · ${ravi.employeeCode}` });
+  await newTask.getByLabel('Someone must approve the result').check();
+  await newTask.getByRole('button', { name: 'Create task' }).click();
+  await expect(m.page.getByRole('heading', { name: 'Update the onboarding checklist' })).toBeVisible();
 
   // Ravi works from home: start, a break, back, end. The sidebar shows the signal while the session runs.
   await r.page.reload();
@@ -145,13 +155,23 @@ test('a work-from-home day without the desktop agent: request, approval, session
   await session.getByRole('button', { name: 'Start work' }).click();
   await expect(session.getByText('Working', { exact: true })).toBeVisible();
   await expect(r.page.getByRole('link', { name: 'Work session running · signal on' })).toBeVisible();
+  // Time the task Maya set; a break stops the timer.
+  const timer = r.page.getByRole('region', { name: 'Task timer' });
+  await timer.getByLabel('Task').selectOption({ label: 'Update the onboarding checklist' });
+  await timer.getByRole('button', { name: 'Start timer' }).click();
+  await expect(timer.getByText('Timing “Update the onboarding checklist”.')).toBeVisible();
   await session.getByLabel('Break').selectOption('MEAL');
   await session.getByRole('button', { name: 'Start break' }).click();
   await expect(session.getByText('On a break', { exact: true })).toBeVisible();
+  await expect(timer).toHaveCount(0); // the timer card hides while the session is on a break…
   await expect(r.page.getByRole('link', { name: 'On a break · session running' })).toBeVisible();
   await shot(r.page, 's8-my-work-break');
   await session.getByRole('button', { name: 'Back to work' }).click();
   await expect(session.getByText('Working', { exact: true })).toBeVisible();
+  await expect(timer.getByText('No task timer running.')).toBeVisible(); // …and the break stopped it.
+  await timer.getByLabel('Task').selectOption({ label: 'Update the onboarding checklist' });
+  await timer.getByRole('button', { name: 'Start timer' }).click();
+  await expect(timer.getByText(/Timing/)).toBeVisible();
   // Moving to another page keeps the session; the attendance page shows the clock-in it made.
   await r.page.getByRole('link', { name: 'My attendance' }).click();
   await expect(r.page.getByText(/Clocked in since/)).toBeVisible();
@@ -166,6 +186,46 @@ test('a work-from-home day without the desktop agent: request, approval, session
   await expect(wfh.getByRole('button', { name: 'Cancel request' })).toHaveCount(0);
   await shot(r.page, 's8-my-work-done');
 
+  // Ravi sends the task for review, then submits the day's report and the week's timesheet.
+  await r.page.getByRole('link', { name: 'Tasks' }).click();
+  await r.page.getByRole('button', { name: 'Open task: Update the onboarding checklist' }).click();
+  const detail = r.page.getByRole('region', { name: 'Task: Update the onboarding checklist' });
+  await detail.getByRole('button', { name: 'Send for review' }).click();
+  await expect(detail.getByText('In review')).toBeVisible();
+  await r.page.getByRole('link', { name: 'Daily report' }).click();
+  const report = r.page.getByRole('region', { name: 'Daily report' });
+  await expect(report.getByText(/Update the onboarding checklist ·/)).toBeVisible();
+  await report.getByLabel('Notes for your manager').fill('Checklist updated; waiting for review.');
+  await report.getByRole('button', { name: 'Submit report' }).click();
+  await expect(report.getByText('Waiting for review')).toBeVisible();
+  await shot(r.page, 's9-daily-report');
+  await r.page.getByRole('link', { name: 'Timesheet' }).click();
+  const sheet = r.page.getByRole('region', { name: 'Timesheet' });
+  await expect(sheet.getByRole('rowheader', { name: 'Update the onboarding checklist' })).toBeVisible();
+  await sheet.getByRole('button', { name: 'Submit timesheet' }).click();
+  await expect(sheet.getByText('Waiting for review')).toBeVisible();
+  await shot(r.page, 's9-timesheet');
+
+  // Maya approves the task, the report and the timesheet.
+  await m.page.getByRole('link', { name: 'Approvals' }).click();
+  const reports = m.page.getByRole('region', { name: 'Daily work reports' });
+  await expect(reports.getByText('“Checklist updated; waiting for review.”')).toBeVisible();
+  await reports.getByRole('button', { name: /^Approve/ }).click();
+  await expect(reports.getByText('Nothing is waiting for you.')).toBeVisible();
+  const sheets = m.page.getByRole('region', { name: 'Timesheets' });
+  await sheets.getByRole('button', { name: /^Approve/ }).click();
+  await expect(sheets.getByText('Nothing is waiting for you.')).toBeVisible();
+  await m.page.getByRole('link', { name: 'Tasks' }).click();
+  await m.page.getByRole('tab', { name: 'My team' }).click();
+  await m.page.getByRole('button', { name: 'Open task: Update the onboarding checklist' }).click();
+  const review = m.page.getByRole('region', { name: 'Task: Update the onboarding checklist' });
+  await review.getByRole('button', { name: 'Mark done' }).click();
+  await expect(review.getByText('Done', { exact: true })).toBeVisible();
+  await r.page.reload();
+  await expect(
+    r.page.getByRole('region', { name: 'Timesheet' }).getByText('Approved', { exact: true }),
+  ).toBeVisible();
+
   // HR (two-step verified) sees Ravi as finished, and the default policy.
   await signIn(page, owner, secret);
   await expect(page.getByText(company)).toBeVisible();
@@ -175,6 +235,12 @@ test('a work-from-home day without the desktop agent: request, approval, session
   await expect(row.getByText('Finished')).toBeVisible();
   await expect(page.getByText(/never shows screens, applications, keystrokes or activity/)).toBeVisible();
   await shot(page, 's8-team-status');
+  await expect(row.getByText('0 open')).toBeVisible(); // the task is done
+  await page.getByRole('link', { name: 'Remote work' }).click();
+  await expect(page.getByRole('heading', { name: 'Remote work' })).toBeVisible();
+  await expect(page.getByText(/no names, no individual activity/)).toBeVisible();
+  await expect(page.getByText('Ravi Kumar')).toHaveCount(0);
+  await shot(page, 's9-remote-work');
   await page.getByRole('link', { name: 'Work policies' }).click();
   await expect(page.getByText('Standard')).toBeVisible();
   await expect(page.getByText('In force')).toBeVisible();

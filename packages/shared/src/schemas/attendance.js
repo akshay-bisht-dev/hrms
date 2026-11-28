@@ -1,5 +1,6 @@
 // @ts-check
 import { z } from 'zod';
+import { patchOf } from './patch.js';
 
 const Id = z.uuid();
 const DateStr = z.iso.date();
@@ -124,7 +125,7 @@ const checkShift = (/** @type {any} */ b, /** @type {z.RefinementCtx} */ ctx) =>
     });
 };
 export const ShiftBody = ShiftShape.superRefine(checkShift);
-export const ShiftPatch = ShiftShape.partial().strict().superRefine(checkShift);
+export const ShiftPatch = patchOf(ShiftShape).superRefine(checkShift);
 
 export const ShiftAssignmentBody = z
   .object({
@@ -171,7 +172,7 @@ export const OvertimeRuleBody = OvertimeRuleShape.superRefine(checkRule).refine(
     (b.dailyThresholdMin ?? null) !== null || (b.weeklyThresholdMin ?? null) !== null || b.restDayAllOvertime,
   { path: ['dailyThresholdMin'], message: 'Set a daily or weekly threshold, or count rest-day work' },
 );
-export const OvertimeRulePatch = OvertimeRuleShape.partial().strict().superRefine(checkRule);
+export const OvertimeRulePatch = patchOf(OvertimeRuleShape).superRefine(checkRule);
 
 export const AttendancePolicyBody = z
   .object({

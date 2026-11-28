@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { clock } from '@/services/attendance';
-import { hms, WORK_STATE_TONE, workApi } from '@/services/work';
+import { hms, WORK_STATE_TONE } from '@/services/work';
+import { tasksApi } from '@/services/tasks';
+import { Link } from 'react-router';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { SelectField } from '@/components/ui/field';
@@ -10,13 +12,13 @@ import { errorMessage } from '@/utils/errors';
 
 const STATES = ['WORKING', 'ON_BREAK', 'DISCONNECTED', 'FINISHED', 'NOT_STARTED'];
 
-/** Who is working right now, for people in the viewer's scope. Status and totals only. */
+/** Manager board: who is working right now, their tasks, and what is waiting for the viewer. Status and totals only. */
 export function TeamWorkPage() {
   const { t, i18n } = useTranslation();
   const [state, setState] = useState('');
   const team = useQuery({
     queryKey: ['work', 'team', state],
-    queryFn: () => workApi.team({ status: state }),
+    queryFn: () => tasksApi.board({ status: state }),
     refetchInterval: 30_000,
   });
   const rows = team.data?.data ?? [];
@@ -31,6 +33,27 @@ export function TeamWorkPage() {
         <h1 className="text-3xl font-bold">{t('teamWork.title')}</h1>
         <p className="mt-1 text-sm text-text-muted">{t('teamWork.subtitle')}</p>
       </header>
+      {team.data && (
+        <section
+          aria-label={t('teamWork.waiting')}
+          className="rounded-[var(--radius-card)] border border-border bg-surface p-5"
+        >
+          <h2 className="text-base font-semibold">{t('teamWork.waiting')}</h2>
+          <ul className="mt-3 grid gap-3 sm:grid-cols-5">
+            {Object.entries(team.data.waitingForYou).map(([k, n]) => (
+              <li key={k} className="rounded-[var(--radius-control)] bg-bg px-3 py-2">
+                <Link
+                  to={k === 'taskReviews' ? '/work/tasks' : '/attendance/approvals'}
+                  className="flex flex-col hover:underline"
+                >
+                  <span className="tabular text-lg font-semibold">{n}</span>
+                  <span className="text-xs text-text-muted">{t(`teamWork.waitingFor.${k}`)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {team.data && (
         <ul aria-label={t('teamWork.counts')} className="flex flex-wrap gap-2">
           {STATES.map((k) => (
@@ -76,10 +99,20 @@ export function TeamWorkPage() {
         )}
         {rows.length > 0 && (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-sm">
+            <table className="w-full min-w-[960px] text-sm">
               <thead>
                 <tr className="bg-bg text-xs font-semibold text-text-muted">
-                  {['person', 'state', 'since', 'location', 'worked', 'breaks', 'signal'].map((c) => (
+                  {[
+                    'person',
+                    'state',
+                    'since',
+                    'location',
+                    'currentTask',
+                    'tasks',
+                    'worked',
+                    'breaks',
+                    'signal',
+                  ].map((c) => (
                     <th key={c} scope="col" className="px-4 py-2.5 text-start">
                       {t(`teamWork.col.${c}`)}
                     </th>
@@ -109,6 +142,16 @@ export function TeamWorkPage() {
                       {r.session ? clock(r.session.startedAt, undefined, i18n.language) : '—'}
                     </td>
                     <td className="px-4 py-3">{r.session?.location.name ?? '—'}</td>
+                    <td className="px-4 py-3">{r.currentTask?.title ?? '—'}</td>
+                    <td className="px-4 py-3">
+                      {t('teamWork.taskCounts', { open: r.tasks.open })}
+                      {r.tasks.overdue > 0 && (
+                        <>
+                          {' '}
+                          <Badge tone="danger">{t('teamWork.overdue', { count: r.tasks.overdue })}</Badge>
+                        </>
+                      )}
+                    </td>
                     <td className="tabular px-4 py-3">{hms(r.today.workedSec)}</td>
                     <td className="tabular px-4 py-3">{hms(r.today.breakSec)}</td>
                     <td className="px-4 py-3 text-text-muted">

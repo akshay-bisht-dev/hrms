@@ -151,6 +151,16 @@ beforeAll(async () => {
     await post('/work/wfh-requests', { workLocationId: ids.homeLocation, fromDate: wfhDay, toDate: wfhDay })
   ).id;
   ids.workPolicy = (await A.call('get', '/work/policies').expect(200)).body.data[0].id;
+  // Tasks: a project with a member, a task with a comment, hand-entered time, a submitted report and timesheet.
+  ids.project = (
+    await post('/projects', { code: 'APRJ', name: 'A project', ownerEmployeeId: ids.employee })
+  ).id;
+  ids.task = (await post('/tasks', { title: 'A task', projectId: ids.project })).id;
+  const today = workDay.workDate; // A's local date
+  ids.timeEntry = (await post('/tasks/time-entries', { taskId: ids.task, date: today, minutes: 30 })).id;
+  ids.workReport = (await A.call('post', `/work-reports/me/${today}/submit`).expect(200)).body.id;
+  const aSheet = (await A.call('get', '/timesheets/me').expect(200)).body;
+  ids.timesheet = (await A.call('post', `/timesheets/me/${aSheet.weekStart}/submit`).expect(200)).body.id;
   await post('/attendance/punches', { type: 'IN', workLocationId: ids.workLocation });
   const yesterday = new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10);
   const correction = await post('/attendance/regularizations', {
@@ -213,6 +223,22 @@ beforeAll(async () => {
       .send({ regime: 'NEW', deductions: {} })
       .expect(200)
   ).body.id;
+  ids.bEmployee = (
+    await B.call('post', '/employees')
+      .send({
+        firstName: 'B person',
+        legalEntityId: (await B.call('get', '/companies/legal-entities').expect(200)).body.data[0].id,
+        dateOfJoining: '2026-01-05',
+      })
+      .expect(201)
+  ).body.id;
+  // B's owner works there too, so B's requests reach every lookup (and not "no employee record").
+  const bMembership = (await B.call('get', '/tenants/members').expect(200)).body.data.find(
+    (m) => m.email === B.email,
+  ).id;
+  await B.call('put', `/tenants/members/${bMembership}/employee`)
+    .send({ employeeId: ids.bEmployee })
+    .expect(204);
   ids.bRole = (await B.call('get', '/tenants/roles').expect(200)).body.data.find(
     (r) => r.systemKey === 'employee',
   ).id;
@@ -232,6 +258,17 @@ function fixtureFor(method, path) {
     [/^\/companies\/work-locations\/:id$/, { id: ids.workLocation }, { name: 'Pwned' }],
     [/^\/attendance\/shifts\/:id$/, { id: ids.shift }, { name: 'Pwned' }],
     [/^\/work\/sessions\/:id$/, { id: ids.workSession }, undefined],
+    [/^\/projects\/:id$/, { id: ids.project }, { name: 'Pwned' }],
+    [/^\/projects\/:id\/members$/, { id: ids.project }, { employeeIds: [ids.bEmployee] }],
+    [/^\/projects\/:id\/members\/:employeeId$/, { id: ids.project, employeeId: ids.employee }, undefined],
+    [/^\/tasks\/time-entries\/:id$/, { id: ids.timeEntry }, undefined],
+    [/^\/tasks\/:id$/, { id: ids.task }, { progressPct: 99 }],
+    [/^\/tasks\/:id\/assignees$/, { id: ids.task }, { assigneeIds: [ids.bEmployee] }],
+    [/^\/tasks\/:id\/status$/, { id: ids.task }, { status: 'CANCELLED' }],
+    [/^\/tasks\/:id\/comments$/, { id: ids.task }, { body: 'Pwned' }],
+    [/^\/tasks\/:id\/timer\/start$/, { id: ids.task }, undefined],
+    [/^\/work-reports\/:id(\/decision)?$/, { id: ids.workReport }, { decision: 'APPROVED' }],
+    [/^\/timesheets\/:id(\/decision)?$/, { id: ids.timesheet }, { decision: 'APPROVED' }],
     [/^\/work\/corrections\/:id\/cancel$/, { id: ids.workCorrection }, undefined],
     [/^\/work\/corrections\/:id\/decision$/, { id: ids.workCorrection }, { decision: 'APPROVED' }],
     [/^\/work\/wfh-requests\/:id\/cancel$/, { id: ids.wfhRequest }, undefined],
@@ -375,7 +412,11 @@ function fixtureFor(method, path) {
 
 test('every id route answers 404 to another tenant (generated from the route registry)', async () => {
   // Self-service routes whose parameter is not an id (they always answer with the caller's own data).
-  const SELF = [/^\/payroll\/tax-declarations\/me\/:fy$/];
+  const SELF = [
+    /^\/payroll\/tax-declarations\/me\/:fy$/,
+    /^\/work-reports\/me\/:date(\/submit)?$/,
+    /^\/timesheets\/me\/:date\/submit$/,
+  ];
   const routes = listRoutes(apiRouter(h.services.routes)).filter(
     (r) => r.path.includes(':') && r.access !== 'public' && !SELF.some((re) => re.test(r.path)),
   );
@@ -431,6 +472,16 @@ test("tenant B's lists never contain tenant A's records", async () => {
     '/leaves/reports/summary?from=2030-01-01&to=2030-01-31',
     `/attendance/days?date=${new Date().toISOString().slice(0, 10)}`,
     '/work/me/status',
+    '/projects',
+    '/tasks?view=mine',
+    '/tasks?view=team',
+    '/tasks?view=created',
+    '/tasks/timer',
+    `/tasks/time-entries?from=2026-01-01&to=2026-02-28`,
+    '/work-reports?view=approvals',
+    '/timesheets?view=approvals',
+    '/dashboards/team-board',
+    '/dashboards/remote-work',
     '/work/policies',
     '/work/team',
     '/work/wfh-requests?view=approvals',
@@ -438,7 +489,7 @@ test("tenant B's lists never contain tenant A's records", async () => {
     `/attendance/reports/summary?from=2026-01-05&to=2026-03-31`,
   ];
   const aIds = Object.entries(ids)
-    .filter(([k]) => k !== 'bRole')
+    .filter(([k]) => k !== 'bRole' && k !== 'bEmployee')
     .map(([, v]) => v);
   for (const path of lists) {
     const text = JSON.stringify((await B.call('get', path).expect(200)).body);
@@ -512,6 +563,9 @@ test("tenant B cannot create records that point at tenant A's records", async ()
       '/work/policies',
       { name: 'X', appliesTo: 'EMPLOYEE', targetId: ids.employee, effectiveFrom: '2030-01-01' },
     ],
+    ['/projects', { code: 'BPRJ', name: 'X', ownerEmployeeId: ids.employee }],
+    ['/tasks', { title: 'X', projectId: ids.project }],
+    ['/tasks', { title: 'X', assigneeIds: [ids.employee] }],
   ];
   for (const [path, body] of cases) {
     const res = await B.call('post', path).send(body);
@@ -578,6 +632,11 @@ test("tenant A's data is unchanged after all of that", async () => {
   expect(aWfh.find((r) => r.id === ids.wfhRequest).status).toBe('PENDING');
   const aPolicies = (await A.call('get', '/work/policies').expect(200)).body.data;
   expect(aPolicies.find((p) => p.id === ids.workPolicy)).toMatchObject({ version: 1, effectiveTo: null });
+  const aTask = (await A.call('get', `/tasks/${ids.task}`).expect(200)).body;
+  expect(aTask).toMatchObject({ status: 'ASSIGNED', progressPct: 0, title: 'A task' });
+  expect(aTask.comments).toEqual([]);
+  expect((await A.call('get', `/work-reports/${ids.workReport}`).expect(200)).body.status).toBe('SUBMITTED');
+  expect((await A.call('get', `/timesheets/${ids.timesheet}`).expect(200)).body.status).toBe('SUBMITTED');
   // B's HR cannot adjust A's employee's balance either.
   await B.call('post', '/leaves/adjustments')
     .send({

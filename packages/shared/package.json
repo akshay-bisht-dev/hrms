@@ -17,6 +17,8 @@
     "./schemas/leave": "./src/schemas/leave.js",
     "./schemas/payroll": "./src/schemas/payroll.js",
     "./schemas/work": "./src/schemas/work.js",
+    "./schemas/tasks": "./src/schemas/tasks.js",
+    "./schemas/patch": "./src/schemas/patch.js",
     "./quantity": "./src/quantity.js"
   },
   "scripts": {

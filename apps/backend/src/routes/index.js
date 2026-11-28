@@ -10,6 +10,12 @@ import { attendanceRouter } from '../modules/attendance/attendance.routes.js';
 import { leaveRouter } from '../modules/leave/leave.routes.js';
 import { payrollRouter } from '../modules/payroll/payroll.routes.js';
 import { workRouter } from '../modules/work/work.routes.js';
+import { projectsRouter, tasksRouter } from '../modules/tasks/tasks.routes.js';
+import {
+  dashboardsRouter,
+  timesheetsRouter,
+  workReportsRouter,
+} from '../modules/timesheets/timesheets.routes.js';
 
 /**
  * Mounts all /api/v1 module routers. Every route must declare its access ('public', 'authenticated' or a
@@ -24,6 +30,11 @@ import { workRouter } from '../modules/work/work.routes.js';
  * @param {Parameters<typeof leaveRouter>[0]} [services.leaveRoutes]
  * @param {Parameters<typeof payrollRouter>[0]} [services.payrollRoutes]
  * @param {Parameters<typeof workRouter>[0]} [services.workRoutes]
+ * @param {Parameters<typeof projectsRouter>[0]} [services.projectsRoutes]
+ * @param {Parameters<typeof tasksRouter>[0]} [services.tasksRoutes]
+ * @param {Parameters<typeof workReportsRouter>[0]} [services.workReportsRoutes]
+ * @param {Parameters<typeof timesheetsRouter>[0]} [services.timesheetsRoutes]
+ * @param {Parameters<typeof dashboardsRouter>[0]} [services.dashboardsRoutes]
  * @returns {import('express').Router}
  */
 export function apiRouter(services) {
@@ -72,6 +83,31 @@ export function apiRouter(services) {
     const work = workRouter(services.workRoutes);
     /** @type {any} */ (work).__mountpath = '/work';
     router.use('/work', work);
+  }
+  if (services?.projectsRoutes) {
+    const r = projectsRouter(services.projectsRoutes);
+    /** @type {any} */ (r).__mountpath = '/projects';
+    router.use('/projects', r);
+  }
+  if (services?.tasksRoutes) {
+    const r = tasksRouter(services.tasksRoutes);
+    /** @type {any} */ (r).__mountpath = '/tasks';
+    router.use('/tasks', r);
+  }
+  if (services?.workReportsRoutes) {
+    const r = workReportsRouter(services.workReportsRoutes);
+    /** @type {any} */ (r).__mountpath = '/work-reports';
+    router.use('/work-reports', r);
+  }
+  if (services?.timesheetsRoutes) {
+    const r = timesheetsRouter(services.timesheetsRoutes);
+    /** @type {any} */ (r).__mountpath = '/timesheets';
+    router.use('/timesheets', r);
+  }
+  if (services?.dashboardsRoutes) {
+    const r = dashboardsRouter(services.dashboardsRoutes);
+    /** @type {any} */ (r).__mountpath = '/dashboards';
+    router.use('/dashboards', r);
   }
   assertRoutesDeclared(router);
   return router;

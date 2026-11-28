@@ -8,6 +8,10 @@ import {
   CalendarDays,
   Plane,
   Laptop,
+  ListTodo,
+  NotebookPen,
+  Sheet,
+  PieChart,
   Radio,
   SlidersHorizontal,
   Receipt,
@@ -151,10 +155,28 @@ export function AppShell() {
           <Laptop aria-hidden="true" className="size-4" />
           {t('nav.myWork')}
         </NavLink>
+        <NavLink to="/work/tasks" className={link}>
+          <ListTodo aria-hidden="true" className="size-4" />
+          {t('nav.tasks')}
+        </NavLink>
+        <NavLink to="/work/report" className={link}>
+          <NotebookPen aria-hidden="true" className="size-4" />
+          {t('nav.dailyReport')}
+        </NavLink>
+        <NavLink to="/work/timesheet" className={link}>
+          <Sheet aria-hidden="true" className="size-4" />
+          {t('nav.timesheet')}
+        </NavLink>
         {can('view_team_work_status') && (
           <NavLink to="/work/team" className={link}>
             <UsersRound aria-hidden="true" className="size-4" />
             {t('nav.teamWork')}
+          </NavLink>
+        )}
+        {can('reports.view') && (
+          <NavLink to="/dashboards/remote-work" className={link}>
+            <PieChart aria-hidden="true" className="size-4" />
+            {t('nav.remoteWork')}
           </NavLink>
         )}
         <span className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-text-muted">
