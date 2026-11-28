@@ -15,6 +15,9 @@ import { createLeaveService } from './modules/leave/leave.service.js';
 import { createPayrollConfigService } from './modules/payroll/config.service.js';
 import { createPayrollRunService } from './modules/payroll/run.service.js';
 import { createWorkService } from './modules/work/work.service.js';
+import { createTasksService } from './modules/tasks/tasks.service.js';
+import { createTimesheetsService } from './modules/timesheets/timesheets.service.js';
+import { createDashboardsService } from './modules/dashboards/dashboards.service.js';
 
 /**
  * Builds module services from infrastructure clients. Shared by server.js and the integration tests,
@@ -56,6 +59,9 @@ export function buildServices({ env, logger, redis, queues, breachCheck, files }
     queues,
   });
   const work = createWorkService({ attendance, mfaEnforce: env.MFA_ENFORCE_FOR_SENSITIVE ?? true });
+  const tasks = createTasksService();
+  const timesheets = createTimesheetsService({ work, mfaEnforce: env.MFA_ENFORCE_FOR_SENSITIVE ?? true });
+  const dashboards = createDashboardsService({ work, tasks, timesheets });
   return {
     jwt,
     auth,
@@ -67,6 +73,9 @@ export function buildServices({ env, logger, redis, queues, breachCheck, files }
     payrollConfig,
     payrollRuns,
     work,
+    tasks,
+    timesheets,
+    dashboards,
     files: files_,
     access: accessControl,
     routes: {
@@ -86,6 +95,11 @@ export function buildServices({ env, logger, redis, queues, breachCheck, files }
       leaveRoutes: { access: accessControl, leave },
       payrollRoutes: { access: accessControl, config: payrollConfig, runs: payrollRuns },
       workRoutes: { access: accessControl, work },
+      projectsRoutes: { access: accessControl, tasks },
+      tasksRoutes: { access: accessControl, tasks },
+      workReportsRoutes: { access: accessControl, timesheets },
+      timesheetsRoutes: { access: accessControl, timesheets },
+      dashboardsRoutes: { access: accessControl, dashboards },
     },
   };
 }

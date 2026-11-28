@@ -552,6 +552,66 @@ await check('system clock-out punch accepted', () =>
     },
   }),
 );
+// Tasks and timesheets (Sprint 9) -----------------------------------------------
+const task = await db.task.create({ data: { id: id(), tenantId: A.t.id, title: 'Smoke task' } });
+await check(
+  'task progress above 100% rejected',
+  () => db.task.update({ where: { id: task.id }, data: { progressPct: 101 } }),
+  /check|constraint/i,
+);
+await check(
+  'task time entry cannot end before it starts',
+  () =>
+    db.taskTimeEntry.create({
+      data: {
+        id: id(),
+        tenantId: A.t.id,
+        taskId: task.id,
+        employeeId: A.emp.id,
+        startedAt: new Date('2026-11-25T10:00:00Z'),
+        endedAt: new Date('2026-11-25T09:00:00Z'),
+      },
+    }),
+  /check|constraint/i,
+);
+await check(
+  'tenant B time entry cannot use tenant A task (composite FK)',
+  () =>
+    db.taskTimeEntry.create({
+      data: { id: id(), tenantId: B.t.id, taskId: task.id, employeeId: B.emp.id, startedAt: new Date() },
+    }),
+  /Foreign key/i,
+);
+await check(
+  'one timesheet per person and week',
+  async () => {
+    const row = {
+      tenantId: A.t.id,
+      employeeId: A.emp.id,
+      weekStart: new Date('2026-11-23'),
+      totalSec: 0,
+      breakdown: {},
+    };
+    await db.timesheetApproval.create({ data: { id: id(), ...row } });
+    await db.timesheetApproval.create({ data: { id: id(), ...row } });
+  },
+  /Unique constraint/i,
+);
+await check(
+  'project cannot end before it starts',
+  () =>
+    db.project.create({
+      data: {
+        id: id(),
+        tenantId: A.t.id,
+        code: 'SMK',
+        name: 'Smoke',
+        startDate: new Date('2026-12-01'),
+        endDate: new Date('2026-11-01'),
+      },
+    }),
+  /check|constraint/i,
+);
 console.table(results);
 await db.$disconnect();
 process.exit(results.some((r) => r[1] !== 'pass') ? 1 : 0);

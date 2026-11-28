@@ -1,5 +1,6 @@
 // @ts-check
 import { z } from 'zod';
+import { patchOf } from './patch.js';
 
 const Id = z.uuid();
 const DateStr = z.iso.date();
@@ -83,7 +84,7 @@ const checkComponent = (/** @type {any} */ b, /** @type {z.RefinementCtx} */ ctx
 };
 export const ComponentBody = ComponentShape.superRefine(checkComponent);
 /** Code and calculation type may be sent but not changed once created (the API refuses a change): history refers to them. */
-export const ComponentPatch = ComponentShape.partial().strict();
+export const ComponentPatch = patchOf(ComponentShape);
 
 export const StructureBody = z
   .object({

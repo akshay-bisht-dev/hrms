@@ -31,6 +31,8 @@ import {
 import { anyOf, employeeScope } from '../employees/scope.js';
 import { REMOTE_LOCATION_TYPES } from '../attendance/engine.js';
 import { SIGNALS, computeTimeline } from './session-engine.js';
+import { stopRunningTimers } from '../tasks/timers.js';
+import { assertWeekOpen } from '../timesheets/lock.js';
 
 const ctx = () => /** @type {any} */ (currentContext());
 const fullName = (/** @type {any} */ e) => [e.firstName, e.lastName].filter(Boolean).join(' ');
@@ -497,6 +499,8 @@ export function createWorkService({ attendance, mfaEnforce = true, now = () => n
           },
         });
       }
+      // A task timer can't outlive the session.
+      await stopRunningTimers(tx, s.employeeId, o.endAt);
       await tx.workSession.update({
         where: { id: s.id },
         data: {
@@ -535,6 +539,8 @@ export function createWorkService({ attendance, mfaEnforce = true, now = () => n
   const service = {
     DISCLOSURE,
     policyFor,
+    /** Live totals of a session (with its policy), for reports and timesheets. @param {any} s */
+    liveTotals: async (s) => (await timelineOf(s)).totals,
 
     // ── Policies (work.config.manage) ──
     async listPolicies() {
@@ -819,6 +825,7 @@ export function createWorkService({ attendance, mfaEnforce = true, now = () => n
       await db().$transaction(async (/** @type {any} */ tx) => {
         await appendEvent(tx, s, 'BREAK_START', t, { ...input, meta: { type: input.type } });
         await tx.workBreak.create({ data: { id: newId(), sessionId: s.id, type: input.type, startedAt: t } });
+        await stopRunningTimers(tx, emp.id, t); // breaks are not task time
         await tx.workSession.update({
           where: { id: s.id },
           data: { status: 'ON_BREAK', lastHeartbeatAt: t },
@@ -995,6 +1002,7 @@ export function createWorkService({ attendance, mfaEnforce = true, now = () => n
       if (!s || s.employeeId !== emp.id) throw new NotFoundError();
       if (!s.endedAt)
         throw new ConflictError('session_open', 'End the session before asking for a correction');
+      await assertWeekOpen(emp.id, /** @type {string} */ (dateToYmd(s.workDate)));
       const t = now();
       if (t.getTime() - s.endedAt.getTime() > CORRECTION_WINDOW_DAYS * 86_400_000)
         throw new ConflictError(
@@ -1068,6 +1076,13 @@ export function createWorkService({ attendance, mfaEnforce = true, now = () => n
       if (c.employeeId === ctx().employeeId)
         throw new ForbiddenError('own_request', 'You cannot decide your own request');
       if (!(await canDecide(c.employee, 'manage_work_sessions', true))) throw new NotFoundError();
+      if (d.decision === 'APPROVED') {
+        const sess = await db().workSession.findUnique({
+          where: { id: c.sessionId },
+          select: { workDate: true },
+        });
+        await assertWeekOpen(c.employeeId, /** @type {string} */ (dateToYmd(sess?.workDate ?? null)));
+      }
       const t = now();
       await db().$transaction(async (/** @type {any} */ tx) => {
         const n = await tx.workCorrection.updateMany({

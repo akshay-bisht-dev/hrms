@@ -1,5 +1,6 @@
 // @ts-check
 import { z } from 'zod';
+import { patchOf } from './patch.js';
 
 const Id = z.uuid();
 const DateStr = z.iso.date();
@@ -56,7 +57,7 @@ export const LeaveTypeShape = z
   })
   .strict();
 export const LeaveTypeBody = LeaveTypeShape;
-export const LeaveTypePatch = LeaveTypeShape.partial().strict();
+export const LeaveTypePatch = patchOf(LeaveTypeShape);
 
 /**
  * Policy rules, stored as JSON on leave_policies.rules. Every value is the company's choice; nothing is hardcoded.

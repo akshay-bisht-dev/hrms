@@ -1,5 +1,6 @@
 // @ts-check
 import { z } from 'zod';
+import { patchOf } from './patch.js';
 
 /** IANA time zone known to the runtime (Intl rejects unknown zones). */
 export const TimeZone = z
@@ -127,7 +128,7 @@ const checkSchedule = (/** @type {any} */ b, /** @type {z.RefinementCtx} */ ctx)
 };
 
 export const WorkScheduleBody = WorkScheduleShape.superRefine(checkSchedule);
-export const WorkSchedulePatch = WorkScheduleShape.partial().strict().superRefine(checkSchedule);
+export const WorkSchedulePatch = patchOf(WorkScheduleShape).superRefine(checkSchedule);
 
 export const WorkLocationBody = z
   .object({
@@ -153,4 +154,4 @@ export const HolidayBody = z
   .strict();
 
 /** Partial versions for PATCH: every field optional, unknown keys still rejected. */
-export const partial = (/** @type {z.ZodObject<any>} */ schema) => schema.partial().strict();
+export const partial = (/** @type {z.ZodObject<any>} */ schema) => patchOf(schema);

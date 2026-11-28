@@ -840,6 +840,7 @@ model TaskTimeEntry {
   session     WorkSession?    @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
 
   @@index([tenantId, employeeId, startedAt])
+  @@index([tenantId, employeeId, endedAt])
   @@index([tenantId, taskId])
   @@map("task_time_entries")
 }
