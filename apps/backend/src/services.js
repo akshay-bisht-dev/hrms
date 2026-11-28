@@ -18,12 +18,15 @@ import { createWorkService } from './modules/work/work.service.js';
 import { createTasksService } from './modules/tasks/tasks.service.js';
 import { createTimesheetsService } from './modules/timesheets/timesheets.service.js';
 import { createDashboardsService } from './modules/dashboards/dashboards.service.js';
+import { createGovernanceService } from './modules/monitoring/governance.service.js';
+import { createDevicesService, deviceAccess } from './modules/monitoring/devices.service.js';
+import { createScreenshotsService } from './modules/monitoring/screenshots.service.js';
 
 /**
  * Builds module services from infrastructure clients. Shared by server.js and the integration tests,
  * so tests exercise exactly the production wiring.
  * @param {{ env: Readonly<import('./config/env.js').Env>, logger: import('pino').Logger, redis: import('ioredis').Redis,
- *           queues: { notifications: import('bullmq').Queue, files?: import('bullmq').Queue, imports?: import('bullmq').Queue, workSessions?: import('bullmq').Queue },
+ *           queues: { notifications: import('bullmq').Queue, files?: import('bullmq').Queue, imports?: import('bullmq').Queue, workSessions?: import('bullmq').Queue, screenshots?: import('bullmq').Queue },
  *           breachCheck?: (pw: string) => Promise<boolean>, files?: ReturnType<typeof storage> }} infra
  */
 export function buildServices({ env, logger, redis, queues, breachCheck, files }) {
@@ -62,6 +65,17 @@ export function buildServices({ env, logger, redis, queues, breachCheck, files }
   const tasks = createTasksService();
   const timesheets = createTimesheetsService({ work, mfaEnforce: env.MFA_ENFORCE_FOR_SENSITIVE ?? true });
   const dashboards = createDashboardsService({ work, tasks, timesheets });
+  const mfaEnforce = env.MFA_ENFORCE_FOR_SENSITIVE ?? true;
+  const governance = createGovernanceService();
+  const devices = createDevicesService({ jwt, governance });
+  const screenshots = createScreenshotsService({
+    governance,
+    files: files_,
+    bucket: env.S3_BUCKET_SCREENSHOTS,
+    queues: { screenshots: queues.screenshots },
+    mfaEnforce,
+  });
+  const device = deviceAccess({ jwt });
   return {
     jwt,
     auth,
@@ -76,6 +90,9 @@ export function buildServices({ env, logger, redis, queues, breachCheck, files }
     tasks,
     timesheets,
     dashboards,
+    governance,
+    devices,
+    screenshots,
     files: files_,
     access: accessControl,
     routes: {
@@ -100,6 +117,15 @@ export function buildServices({ env, logger, redis, queues, breachCheck, files }
       workReportsRoutes: { access: accessControl, timesheets },
       timesheetsRoutes: { access: accessControl, timesheets },
       dashboardsRoutes: { access: accessControl, dashboards },
+      monitoringRoutes: { access: accessControl, governance },
+      devicesRoutes: {
+        access: accessControl,
+        devices,
+        redis,
+        registerLimitPerMin: env.AUTH_IP_LIMIT_PER_MIN,
+      },
+      agentRoutes: { device, governance, work, screenshots },
+      screenshotsRoutes: { access: accessControl, screenshots },
     },
   };
 }

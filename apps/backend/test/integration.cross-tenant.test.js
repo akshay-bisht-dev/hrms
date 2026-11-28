@@ -6,6 +6,8 @@ import { apiRouter } from '../src/routes/index.js';
 import { listRoutes } from '../src/lib/route-registry.js';
 import request from 'supertest';
 import { runWithContext } from '../src/lib/context.js';
+import { platformDb } from '../src/lib/db.js';
+import { newId } from '@hrms/shared/ids';
 import { startHarness } from './helpers/harness.js';
 
 let h;
@@ -161,6 +163,72 @@ beforeAll(async () => {
   ids.workReport = (await A.call('post', `/work-reports/me/${today}/submit`).expect(200)).body.id;
   const aSheet = (await A.call('get', '/timesheets/me').expect(200)).body;
   ids.timesheet = (await A.call('post', `/timesheets/me/${aSheet.weekStart}/submit`).expect(200)).body.id;
+  // Monitoring: a completed checklist, a policy, a paired device, a screenshot with a dispute, and an incident.
+  const aRoles = (await A.call('get', '/tenants/roles').expect(200)).body.data;
+  ids.activation = (
+    await post('/monitoring/activations', {
+      purpose: 'A purpose that is long enough for the checklist to accept it.',
+      scope: { appliesTo: 'COMPANY' },
+      lawfulBasis: {
+        basis: 'LEGITIMATE_INTEREST',
+        explanation: 'An explanation long enough to pass validation.',
+      },
+      noticeText:
+        'A notice text that explains monitoring to employees in enough detail to pass the minimum length rule.'.repeat(
+          2,
+        ),
+      noticeStartsOn: today,
+      viewerRoleIds: [aRoles.find((r) => r.systemKey === 'company_admin').id],
+      retentionDays: 30,
+      contacts: {
+        privacyContactName: 'A privacy',
+        privacyContactEmail: 'a@example.com',
+        grievanceEmail: 'a@example.com',
+      },
+      reviewDueOn: '2030-01-01',
+      ownLegalAdviceConfirmed: true,
+      jurisdictionSteps: { IN: { WRITTEN_NOTICE: { done: true }, PURPOSE_LIMITATION: { done: true } } },
+    })
+  ).id;
+  await A.call('post', `/monitoring/activations/${ids.activation}/complete`).expect(200);
+  ids.screenshotPolicy = (
+    await post('/monitoring/policies', { name: 'A policy', enabled: true, effectiveFrom: today })
+  ).id;
+  const { code } = (await A.call('post', '/devices/pairing-codes').expect(201)).body;
+  const aDevice = (
+    await request(h.app)
+      .post('/api/v1/devices/register')
+      .send({
+        code,
+        os: 'LINUX',
+        osVersion: '6',
+        agentVersion: '0.1.0',
+        fingerprintHash: 'a'.repeat(64),
+        ownership: 'COMPANY_MANAGED',
+      })
+      .expect(201)
+  ).body;
+  ids.device = aDevice.deviceId;
+  ids.screenshot = newId();
+  await platformDb().screenshotRecord.create({
+    data: {
+      id: ids.screenshot,
+      tenantId: A.tenantId,
+      employeeId: ids.employee,
+      sessionId: ids.workSession,
+      deviceId: ids.device,
+      policyId: ids.screenshotPolicy,
+      policyVersion: 1,
+      status: 'AVAILABLE',
+      capturedAtServer: new Date(),
+      retentionUntil: new Date(Date.now() + 86_400_000),
+      s3Key: `tenant/${A.tenantId}/x.webp`,
+    },
+  });
+  ids.dispute = (await post(`/screenshots/${ids.screenshot}/disputes`, { reason: 'A dispute reason' })).id;
+  ids.incident = (
+    await post('/screenshots/privacy-incidents', { description: 'An incident description' })
+  ).id;
   await post('/attendance/punches', { type: 'IN', workLocationId: ids.workLocation });
   const yesterday = new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10);
   const correction = await post('/attendance/regularizations', {
@@ -259,6 +327,31 @@ function fixtureFor(method, path) {
     [/^\/attendance\/shifts\/:id$/, { id: ids.shift }, { name: 'Pwned' }],
     [/^\/work\/sessions\/:id$/, { id: ids.workSession }, undefined],
     [/^\/projects\/:id$/, { id: ids.project }, { name: 'Pwned' }],
+    [
+      /^\/monitoring\/activations\/:id(\/(complete|pause|resume))?$/,
+      { id: ids.activation },
+      { retentionDays: 7 },
+    ],
+    [
+      /^\/monitoring\/policies\/:id\/versions$/,
+      { id: ids.screenshotPolicy },
+      { appliesTo: 'COMPANY', effectiveFrom: '2030-01-01' },
+    ],
+    [/^\/devices\/(me\/)?:id\/revoke$/, { id: ids.device }, { reason: 'Pwned' }],
+    [/^\/devices\/:id\/approve$/, { id: ids.device }, undefined],
+    [/^\/screenshots\/:id\/(view-url|download)$/, { id: ids.screenshot }, undefined],
+    [/^\/screenshots\/:id\/delete$/, { id: ids.screenshot }, { reason: 'Pwned' }],
+    [/^\/screenshots\/:id\/disputes$/, { id: ids.screenshot }, { reason: 'Pwned pwned' }],
+    [
+      /^\/screenshots\/disputes\/:id\/resolve$/,
+      { id: ids.dispute },
+      { outcome: 'DELETED', resolution: 'Pwned pwned' },
+    ],
+    [
+      /^\/screenshots\/privacy-incidents\/:id\/resolve$/,
+      { id: ids.incident },
+      { resolution: 'Pwned pwned', deleteScreenshot: true },
+    ],
     [/^\/projects\/:id\/members$/, { id: ids.project }, { employeeIds: [ids.bEmployee] }],
     [/^\/projects\/:id\/members\/:employeeId$/, { id: ids.project, employeeId: ids.employee }, undefined],
     [/^\/tasks\/time-entries\/:id$/, { id: ids.timeEntry }, undefined],
@@ -417,8 +510,10 @@ test('every id route answers 404 to another tenant (generated from the route reg
     /^\/work-reports\/me\/:date(\/submit)?$/,
     /^\/timesheets\/me\/:date\/submit$/,
   ];
+  // Device routes are covered by their own test below (they take a device token, not a web session).
   const routes = listRoutes(apiRouter(h.services.routes)).filter(
-    (r) => r.path.includes(':') && r.access !== 'public' && !SELF.some((re) => re.test(r.path)),
+    (r) =>
+      r.path.includes(':') && !['public', 'device'].includes(r.access) && !SELF.some((re) => re.test(r.path)),
   );
   expect(routes.length).toBeGreaterThan(30);
   const unmapped = routes.filter((r) => !fixtureFor(r.method, r.path)).map((r) => `${r.method} ${r.path}`);
@@ -472,6 +567,15 @@ test("tenant B's lists never contain tenant A's records", async () => {
     '/leaves/reports/summary?from=2030-01-01&to=2030-01-31',
     `/attendance/days?date=${new Date().toISOString().slice(0, 10)}`,
     '/work/me/status',
+    '/monitoring/me',
+    '/monitoring/activations',
+    '/monitoring/policies',
+    '/devices',
+    '/devices/me',
+    '/screenshots',
+    '/screenshots/disputes',
+    '/screenshots/privacy-incidents',
+    '/screenshots/access-logs',
     '/projects',
     '/tasks?view=mine',
     '/tasks?view=team',
@@ -632,6 +736,21 @@ test("tenant A's data is unchanged after all of that", async () => {
   expect(aWfh.find((r) => r.id === ids.wfhRequest).status).toBe('PENDING');
   const aPolicies = (await A.call('get', '/work/policies').expect(200)).body.data;
   expect(aPolicies.find((p) => p.id === ids.workPolicy)).toMatchObject({ version: 1, effectiveTo: null });
+  expect((await A.call('get', '/monitoring/activations').expect(200)).body.data[0]).toMatchObject({
+    id: ids.activation,
+    status: 'ACTIVE',
+    retentionDays: 30,
+  });
+  expect(
+    (await A.call('get', '/devices').expect(200)).body.data.find((d) => d.id === ids.device).status,
+  ).not.toBe('REVOKED');
+  expect((await A.call('get', '/screenshots/disputes').expect(200)).body.data[0]).toMatchObject({
+    id: ids.dispute,
+    status: 'OPEN',
+  });
+  expect((await platformDb().screenshotRecord.findUnique({ where: { id: ids.screenshot } })).status).toBe(
+    'UNDER_DISPUTE',
+  );
   const aTask = (await A.call('get', `/tasks/${ids.task}`).expect(200)).body;
   expect(aTask).toMatchObject({ status: 'ASSIGNED', progressPct: 0, title: 'A task' });
   expect(aTask.comments).toEqual([]);
@@ -658,4 +777,38 @@ test('every registered route is in the API docs', async () => {
     .map((r) => `${r.method} /api/v1${r.path.replace(/:(\w+)/g, '{$1}')}`.replace(/\/$/, ''))
     .filter((k) => !documented.has(k));
   expect(missing).toEqual([]);
+});
+
+test("a device of tenant B can't touch tenant A's sessions or screenshots", async () => {
+  const { code } = (await B.call('post', '/devices/pairing-codes').expect(201)).body;
+  const bDevice = (
+    await request(h.app)
+      .post('/api/v1/devices/register')
+      .send({
+        code,
+        os: 'LINUX',
+        osVersion: '6',
+        agentVersion: '0.1.0',
+        fingerprintHash: 'a'.repeat(64),
+        ownership: 'COMPANY_MANAGED',
+      })
+      .expect(201)
+  ).body;
+  // The same machine fingerprint in another company is a different device.
+  expect(bDevice.deviceId).not.toBe(ids.device);
+  const as = (path, body) =>
+    request(h.app)
+      .post(`/api/v1/agent${path}`)
+      .set('Authorization', `Bearer ${bDevice.accessToken}`)
+      .send(body);
+  await as(`/screenshots/${ids.screenshot}/confirm`, { sha256: 'b'.repeat(64), bytes: 10 }).expect(404);
+  await as('/screenshots/skips', {
+    sessionId: ids.workSession,
+    reason: 'IDLE',
+    occurredAt: new Date().toISOString(),
+  }).expect(404);
+  expect((await as('/me/acknowledge', { activationId: ids.activation, locale: 'en' })).status).toBe(409);
+  expect(
+    (await platformDb().screenshotRecord.findUnique({ where: { id: ids.screenshot } })).sha256,
+  ).toBeNull();
 });

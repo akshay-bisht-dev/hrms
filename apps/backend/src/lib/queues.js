@@ -28,13 +28,24 @@ export function createQueues(connection) {
     connection,
     defaultJobOptions: { ...DEFAULT_JOB_OPTIONS, attempts: 3 },
   });
+  const screenshots = new Queue(QUEUES.SCREENSHOTS, {
+    connection,
+    defaultJobOptions: { ...DEFAULT_JOB_OPTIONS, attempts: 3 },
+  });
   return {
     notifications,
     files,
     imports,
     workSessions,
+    screenshots,
     async close() {
-      await Promise.all([notifications.close(), files.close(), imports.close(), workSessions.close()]);
+      await Promise.all([
+        notifications.close(),
+        files.close(),
+        imports.close(),
+        workSessions.close(),
+        screenshots.close(),
+      ]);
     },
   };
 }

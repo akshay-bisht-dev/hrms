@@ -361,7 +361,9 @@ export function createWorkService({ attendance, mfaEnforce = true, now = () => n
           type,
           serverTs: t,
           clientTs: o.clientTs ? new Date(o.clientTs) : null,
-          source: o.source ?? 'WEB',
+          // Requests from the desktop agent carry its device; everything else is the web app.
+          source: o.source ?? (ctx().deviceId ? 'DESKTOP_AGENT' : 'WEB'),
+          deviceId: ctx().deviceId ?? null,
           idempotencyKey: o.idempotencyKey ?? null,
           ...(o.meta ? { meta: o.meta } : {}),
         },
@@ -516,7 +518,7 @@ export function createWorkService({ attendance, mfaEnforce = true, now = () => n
     await attendance.recordWorkPunch(s.employeeId, {
       type: 'OUT',
       at: o.endAt,
-      source: o.type === 'END' ? 'WEB' : 'SYSTEM',
+      source: o.type === 'END' ? (ctx().deviceId ? 'DESKTOP_AGENT' : 'WEB') : 'SYSTEM',
     });
     return closed;
   }
@@ -771,7 +773,7 @@ export function createWorkService({ attendance, mfaEnforce = true, now = () => n
       await attendance.recordWorkPunch(emp.id, {
         type: 'IN',
         at: t,
-        source: 'WEB',
+        source: ctx().deviceId ? 'DESKTOP_AGENT' : 'WEB',
         workLocationId: location.id,
       });
       return service.status();

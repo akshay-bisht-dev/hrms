@@ -190,6 +190,52 @@ async function main() {
     }
   }
 
+  // Monitoring jurisdiction registry (GLB-14..16). PROVISIONAL: these entries have NOT been reviewed by lawyers
+  // (legalReviewedOn stays null and the product says so). Countries without an entry, or marked UNKNOWN, stay
+  // closed: screenshots are never enabled there. Entries are created once and never edited; a change is a new version.
+  const JURISDICTIONS = [
+    {
+      countryCode: 'IN',
+      steps: ['WRITTEN_NOTICE', 'PURPOSE_LIMITATION'],
+      maxRetentionDays: 90,
+      minNoticeDays: 7,
+    },
+    {
+      countryCode: 'GB',
+      steps: ['WRITTEN_NOTICE', 'DPIA', 'PURPOSE_LIMITATION'],
+      maxRetentionDays: 90,
+      minNoticeDays: 14,
+    },
+    { countryCode: 'US', steps: ['WRITTEN_NOTICE'], maxRetentionDays: 90, minNoticeDays: 7 },
+    {
+      countryCode: 'DE',
+      steps: ['WRITTEN_NOTICE', 'DPIA', 'WORKS_COUNCIL', 'PURPOSE_LIMITATION'],
+      maxRetentionDays: 30,
+      minNoticeDays: 30,
+    },
+  ];
+  for (const j of JURISDICTIONS) {
+    const key = {
+      countryCode_regionCode_version: { countryCode: j.countryCode, regionCode: '', version: 1 },
+    };
+    if (!(await db.jurisdictionPolicy.findUnique({ where: key })))
+      await db.jurisdictionPolicy.create({
+        data: {
+          id: newId(),
+          countryCode: j.countryCode,
+          regionCode: '',
+          version: 1,
+          screenshotsAllowed: 'ALLOWED_WITH_STEPS',
+          activityAllowed: 'UNKNOWN',
+          requiredSteps: j.steps,
+          maxRetentionDays: j.maxRetentionDays,
+          minNoticeDays: j.minNoticeDays,
+          legalReviewedOn: null,
+          effectiveFrom: new Date('2026-01-01T00:00:00Z'),
+        },
+      });
+  }
+
   const counts = {
     currencies: await db.currency.count(),
     countries: await db.countryProfile.count(),
@@ -197,6 +243,7 @@ async function main() {
     plans: await db.plan.count(),
     planPrices: await db.planPrice.count(),
     statutoryRuleVersions: await db.statutoryRuleVersion.count(),
+    jurisdictionPolicies: await db.jurisdictionPolicy.count(),
   };
   console.log('Seed complete:', counts);
 }

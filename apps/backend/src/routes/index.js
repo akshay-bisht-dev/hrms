@@ -16,6 +16,12 @@ import {
   timesheetsRouter,
   workReportsRouter,
 } from '../modules/timesheets/timesheets.routes.js';
+import {
+  agentRouter,
+  devicesRouter,
+  monitoringRouter,
+  screenshotsRouter,
+} from '../modules/monitoring/monitoring.routes.js';
 
 /**
  * Mounts all /api/v1 module routers. Every route must declare its access ('public', 'authenticated' or a
@@ -35,6 +41,10 @@ import {
  * @param {Parameters<typeof workReportsRouter>[0]} [services.workReportsRoutes]
  * @param {Parameters<typeof timesheetsRouter>[0]} [services.timesheetsRoutes]
  * @param {Parameters<typeof dashboardsRouter>[0]} [services.dashboardsRoutes]
+ * @param {Parameters<typeof monitoringRouter>[0]} [services.monitoringRoutes]
+ * @param {Parameters<typeof devicesRouter>[0]} [services.devicesRoutes]
+ * @param {Parameters<typeof agentRouter>[0]} [services.agentRoutes]
+ * @param {Parameters<typeof screenshotsRouter>[0]} [services.screenshotsRoutes]
  * @returns {import('express').Router}
  */
 export function apiRouter(services) {
@@ -108,6 +118,26 @@ export function apiRouter(services) {
     const r = dashboardsRouter(services.dashboardsRoutes);
     /** @type {any} */ (r).__mountpath = '/dashboards';
     router.use('/dashboards', r);
+  }
+  if (services?.monitoringRoutes) {
+    const r = monitoringRouter(services.monitoringRoutes);
+    /** @type {any} */ (r).__mountpath = '/monitoring';
+    router.use('/monitoring', r);
+  }
+  if (services?.devicesRoutes) {
+    const r = devicesRouter(services.devicesRoutes);
+    /** @type {any} */ (r).__mountpath = '/devices';
+    router.use('/devices', r);
+  }
+  if (services?.agentRoutes) {
+    const r = agentRouter(services.agentRoutes);
+    /** @type {any} */ (r).__mountpath = '/agent';
+    router.use('/agent', r);
+  }
+  if (services?.screenshotsRoutes) {
+    const r = screenshotsRouter(services.screenshotsRoutes);
+    /** @type {any} */ (r).__mountpath = '/screenshots';
+    router.use('/screenshots', r);
   }
   assertRoutesDeclared(router);
   return router;

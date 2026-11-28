@@ -483,7 +483,7 @@ export function createAttendanceService({ queues, now = () => new Date() } = {})
      * Does nothing when the attendance state already matches, so a person who clocked in on the attendance page
      * can start a work session without a second IN. The location was already checked by the work-session rules.
      * @param {string} employeeId
-     * @param {{ type: 'IN' | 'OUT', at: Date, source: 'WEB' | 'SYSTEM', workLocationId?: string | null }} p
+     * @param {{ type: 'IN' | 'OUT', at: Date, source: 'WEB' | 'SYSTEM' | 'DESKTOP_AGENT', workLocationId?: string | null }} p
      */
     async recordWorkPunch(employeeId, { type, at, source, workLocationId = null }) {
       const emp = await loadEmployee(employeeId);

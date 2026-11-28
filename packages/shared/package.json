@@ -19,6 +19,7 @@
     "./schemas/work": "./src/schemas/work.js",
     "./schemas/tasks": "./src/schemas/tasks.js",
     "./schemas/patch": "./src/schemas/patch.js",
+    "./schemas/monitoring": "./src/schemas/monitoring.js",
     "./quantity": "./src/quantity.js"
   },
   "scripts": {

@@ -15,5 +15,6 @@ export function requestContext(req, res, next) {
   res.setHeader('X-Request-Id', requestId);
   // @ts-ignore — attached for pino-http and handlers
   req.id = requestId;
-  runWithContext({ requestId }, () => next());
+  // Client IP and user agent are kept for access logs that must record them (screenshot views).
+  runWithContext({ requestId, ip: req.ip ?? null, userAgent: req.get('user-agent') ?? null }, () => next());
 }

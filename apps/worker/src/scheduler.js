@@ -8,7 +8,7 @@ import { loadWorkerConfig } from './config.js';
 /**
  * Registers repeatable jobs. `upsertJobScheduler` is idempotent by scheduler id, so running this twice
  * (e.g. during a deploy overlap) never creates duplicate schedules.
- * Later sprints add: retention sweep (nightly) …
+ * Later sprints add: data-retention sweeps for other modules …
  */
 export const SCHEDULES = [
   { queue: QUEUES.SYSTEM, id: 'system-heartbeat', every: 60_000, name: 'heartbeat', data: {} },
@@ -18,6 +18,14 @@ export const SCHEDULES = [
     id: 'work-session-sweep',
     every: 60_000,
     name: 'work-session-sweep',
+    data: {},
+  },
+  // Deletes screenshots past their retention (keeping a metadata tombstone) once a day in every company.
+  {
+    queue: QUEUES.SCREENSHOTS,
+    id: 'screenshot-retention',
+    every: 24 * 60 * 60_000,
+    name: 'screenshot-retention',
     data: {},
   },
   // Closes finished days (absent, missing clock-out) and refreshes the last two days in every company.

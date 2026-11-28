@@ -9,6 +9,9 @@ import { createSystemProcessor } from './processors/system.js';
 import { createNotificationsProcessor } from './processors/notifications.js';
 import { createFilesProcessor, createImportsProcessor } from './processors/tenant-jobs.js';
 import { createWorkSessionsProcessor } from './processors/work-sessions.js';
+import { createScreenshotsProcessor } from './processors/screenshots.js';
+import { createGovernanceService } from '@hrms/backend/modules/monitoring/governance.service.js';
+import { createScreenshotsService } from '@hrms/backend/modules/monitoring/screenshots.service.js';
 import { createAttendanceService } from '@hrms/backend/modules/attendance/attendance.service.js';
 import { createWorkService } from '@hrms/backend/modules/work/work.service.js';
 import { createLeaveService } from '@hrms/backend/modules/leave/leave.service.js';
@@ -63,6 +66,15 @@ const imports = createImportsService({ employees, files, buckets });
 const attendance = createAttendanceService();
 const leave = createLeaveService({ attendance });
 const work = createWorkService({ attendance });
+const screenshots = createScreenshotsService({
+  governance: createGovernanceService(),
+  files,
+  bucket: config.S3_BUCKET_SCREENSHOTS,
+});
+const screenshotsQueue = new Queue(QUEUES.SCREENSHOTS, {
+  connection,
+  defaultJobOptions: DEFAULT_JOB_OPTIONS,
+});
 const payrollConfig = createPayrollConfigService();
 const payrollRuns = createPayrollRunService({
   config: payrollConfig,
@@ -111,6 +123,11 @@ const workers = [
     ),
     { connection, concurrency: config.WORKER_WORK_SESSIONS_CONCURRENCY },
   ),
+  new Worker(
+    QUEUES.SCREENSHOTS,
+    guarded(createScreenshotsProcessor({ screenshots, platformDb, queue: screenshotsQueue, logger })),
+    { connection, concurrency: config.WORKER_SCREENSHOTS_CONCURRENCY },
+  ),
   new Worker(QUEUES.SYSTEM, guarded(createSystemProcessor({ logger })), {
     connection,
     concurrency: config.WORKER_SYSTEM_CONCURRENCY,
@@ -138,6 +155,7 @@ async function shutdown(signal) {
   force.unref();
   await Promise.allSettled(workers.map((w) => w.close()));
   await workSessionsQueue.close().catch(() => {});
+  await screenshotsQueue.close().catch(() => {});
   await connection.quit().catch(() => {});
   await closeDb().catch(() => {});
   logger.info('Worker stopped');

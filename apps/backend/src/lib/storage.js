@@ -53,6 +53,12 @@ export const keys = {
   importFile: (tenantId, jobId) => `tenant/${tenantId}/imports/${jobId}/source.csv`,
   /** @param {string} tenantId @param {string} jobId */
   importResult: (tenantId, jobId) => `tenant/${tenantId}/imports/${jobId}/result.csv`,
+  /** @param {string} tenantId @param {string} employeeId @param {string} sessionId @param {string} id */
+  screenshot: (tenantId, employeeId, sessionId, id) =>
+    `tenant/${tenantId}/employees/${employeeId}/work-sessions/${sessionId}/screenshots/${id}.webp`,
+  /** @param {string} tenantId @param {string} employeeId @param {string} sessionId @param {string} id */
+  screenshotThumb: (tenantId, employeeId, sessionId, id) =>
+    `tenant/${tenantId}/employees/${employeeId}/work-sessions/${sessionId}/screenshots/thumbs/${id}.webp`,
 };
 
 /** RFC 6266 attachment header with a safe ASCII fallback and the UTF-8 name. @param {string} name */
@@ -83,6 +89,19 @@ export function storage(s3) {
           Bucket: bucket,
           Key: key,
           ResponseContentDisposition: attachmentDisposition(fileName),
+          ResponseCacheControl: 'no-store',
+        }),
+        { expiresIn: URL_TTL_SEC },
+      ),
+    /** Presigned GET that shows an image inline (screenshots); never cached. @param {string} bucket @param {string} key @param {string} contentType */
+    viewUrl: (bucket, key, contentType) =>
+      getSignedUrl(
+        s3,
+        new GetObjectCommand({
+          Bucket: bucket,
+          Key: key,
+          ResponseContentType: contentType,
+          ResponseContentDisposition: 'inline',
           ResponseCacheControl: 'no-store',
         }),
         { expiresIn: URL_TTL_SEC },
