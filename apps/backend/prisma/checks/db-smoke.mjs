@@ -612,6 +612,58 @@ await check(
     }),
   /check|constraint/i,
 );
+// Monitoring (Sprint 10) -----------------------------------------------------------
+const act = await db.monitoringActivation.create({
+  data: {
+    id: id(),
+    tenantId: A.t.id,
+    version: 1,
+    status: 'ACTIVE',
+    purpose: 'p',
+    scope: {},
+    jurisdictionSteps: {},
+    lawfulBasis: {},
+    noticeText: 'n',
+    noticeLocales: ['en'],
+    noticeStartsOn: new Date('2026-12-01'),
+    viewerRoleIds: [],
+    retentionDays: 30,
+    contacts: {},
+    reviewDueOn: new Date('2027-03-01'),
+    completedAt: new Date(),
+  },
+});
+const shotPolicy = (extra) => ({
+  id: id(),
+  tenantId: A.t.id,
+  activationId: act.id,
+  name: `S ${id()}`,
+  appliesTo: 'COMPANY',
+  excludedApps: [],
+  effectiveFrom: new Date('2026-12-01'),
+  createdBy: id(),
+  ...extra,
+});
+await check(
+  'screenshot policy can never enable application activity',
+  () => db.screenshotPolicy.create({ data: shotPolicy({ activityTrackingEnabled: true }) }),
+  /check|constraint/i,
+);
+await check(
+  'screenshot interval below 5 minutes rejected',
+  () => db.screenshotPolicy.create({ data: shotPolicy({ intervalMin: 1 }) }),
+  /check|constraint/i,
+);
+await check(
+  'a non-draft checklist must have a completion time',
+  () => db.monitoringActivation.update({ where: { id: act.id }, data: { completedAt: null } }),
+  /check|constraint/i,
+);
+await check(
+  'one activation version number per company',
+  () => db.monitoringActivation.create({ data: { ...act, id: id() } }),
+  /Unique constraint/i,
+);
 console.table(results);
 await db.$disconnect();
 process.exit(results.some((r) => r[1] !== 'pass') ? 1 : 0);

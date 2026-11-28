@@ -6,6 +6,7 @@ import { clock, REQUEST_TONE } from '@/services/attendance';
 import { hms, SEGMENT_CLASS, SESSION_TONE, workApi } from '@/services/work';
 import { tasksApi } from '@/services/tasks';
 import { Link } from 'react-router';
+import { MonitoringCard } from './MonitoringCard';
 import { useWorkStatus, WORK_STATUS_KEY, zonedIso } from '@/hooks/useWorkSession';
 import { FormMessages, useFormAction } from '@/hooks/useFormAction';
 import { Alert } from '@/components/ui/alert';
@@ -49,6 +50,7 @@ function MyWork({ status }) {
       <SessionCard status={status} />
       {status.active && status.active.status !== 'ON_BREAK' && <TaskTimer />}
       <Disclosure status={status} />
+      <MonitoringCard />
       <Today status={status} onFix={setFixing} />
       {fixing && (
         <CorrectionForm session={fixing} tz={status.employee.timezone} onClose={() => setFixing(null)} />

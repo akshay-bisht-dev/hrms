@@ -29,6 +29,8 @@ import { TeamWorkPage } from '@/pages/work/TeamWorkPage';
 import { TasksPage } from '@/pages/work/TasksPage';
 import { DailyReportPage, TimesheetPage } from '@/pages/work/ReportPages';
 import { RemoteWorkDashboardPage } from '@/pages/work/RemoteWorkDashboardPage';
+import { MyScreenshotsPage, ScreenshotReviewPage } from '@/pages/work/ScreenshotPages';
+import { MonitoringSettingsPage } from '@/pages/settings/MonitoringSettingsPage';
 import { WorkSettingsPage } from '@/pages/settings/WorkSettingsPage';
 import { AttendanceSettingsPage } from '@/pages/settings/AttendanceSettingsPage';
 import { MyLeavePage } from '@/pages/leave/MyLeavePage';
@@ -79,6 +81,9 @@ export const routes = [
           { path: 'work', element: <MyWorkPage /> },
           { path: 'work/team', element: <TeamWorkPage /> },
           { path: 'work/tasks', element: <TasksPage /> },
+          { path: 'work/screenshots', element: <MyScreenshotsPage /> },
+          { path: 'work/screenshot-review', element: <ScreenshotReviewPage /> },
+          { path: 'settings/monitoring', element: <MonitoringSettingsPage /> },
           { path: 'work/report', element: <DailyReportPage /> },
           { path: 'work/timesheet', element: <TimesheetPage /> },
           { path: 'dashboards/remote-work', element: <RemoteWorkDashboardPage /> },

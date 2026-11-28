@@ -12,6 +12,10 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # The desktop app's unit tests don't need the Electron binary (about 100 MB); E2E with the app runs locally.
+  ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+
 jobs:
   checks:
     name: Lint, syntax, unit tests, build

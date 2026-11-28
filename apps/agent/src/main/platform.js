@@ -28,7 +28,8 @@ const run = (cmd, args) =>
  */
 export async function foregroundApp(platform = process.platform) {
   if (platform === 'linux') {
-    const id = await run('xdotool', ['getactivewindow']);
+    // getactivewindow needs a window manager; getwindowfocus works without one (e.g. minimal X sessions).
+    const id = (await run('xdotool', ['getactivewindow'])) ?? (await run('xdotool', ['getwindowfocus']));
     if (!id) return null;
     const pid = await run('xdotool', ['getwindowpid', id]);
     if (!pid || !/^\d+$/.test(pid)) return null;

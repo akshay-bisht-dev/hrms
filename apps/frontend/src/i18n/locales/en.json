@@ -42,7 +42,9 @@
     "tasks": "Tasks",
     "dailyReport": "Daily report",
     "timesheet": "Timesheet",
-    "remoteWork": "Remote work"
+    "remoteWork": "Remote work",
+    "screenshotReview": "Screenshot review",
+    "monitoringSettings": "Monitoring"
   },
   "status": {
     "title": "System status",
@@ -1542,5 +1544,232 @@
       "remote": "Worked remotely"
     },
     "privacy": "Built from work sessions only. Individual records stay with each person and their approvers."
+  },
+  "monitoring": {
+    "card": {
+      "title": "Screen monitoring",
+      "on": "On for you",
+      "off": "Off for you",
+      "onText": "While your work session runs in the desktop app on a company computer, a screenshot is taken about every {{interval}} minutes (never on a break, when idle or when the screen is locked). Screenshots are kept for {{days}} days. You can see and dispute your own.",
+      "companyResponsible": "Your company is responsible for the legal basis for monitoring in your country.",
+      "noticeTitle": "Please read: monitoring notice",
+      "purpose": "Why",
+      "contacts": "Questions: {{name}} ({{email}}). Complaints: {{grievance}}.",
+      "acknowledge": "I have read and understood this notice",
+      "myScreenshots": "See my screenshots and who viewed them"
+    },
+    "reason": {
+      "NO_EMPLOYEE_RECORD": "Your sign-in is not linked to an employee record, so nothing applies to you.",
+      "NOT_ACTIVATED": "Your company has not turned on screen monitoring. No screenshots are taken.",
+      "OUT_OF_SCOPE": "Screen monitoring does not apply to you.",
+      "JURISDICTION_UNKNOWN": "Screen monitoring is not available for people working in {{country}}. No screenshots are taken.",
+      "JURISDICTION_NOT_ALLOWED": "Screen monitoring is not allowed for people working in {{country}}.",
+      "JURISDICTION_STEPS_MISSING": "Your company has not finished the steps required in {{country}}, so no screenshots are taken.",
+      "NOTICE_PERIOD": "Screen monitoring has been announced and can start on {{date}} at the earliest.",
+      "NO_POLICY": "No screenshot policy applies to you. No screenshots are taken.",
+      "ACK_REQUIRED": "Your company turned on screen monitoring. It applies to you only after you read the notice below."
+    },
+    "devices": {
+      "title": "Desktop app",
+      "none": "No computers connected.",
+      "connect": "Connect the desktop app",
+      "disconnect": "Disconnect",
+      "codeHelp": "Enter this code in the desktop app:",
+      "codeExpires": "Valid until {{time}}, once.",
+      "lastSeen": "last seen {{time}}"
+    },
+    "os": {
+      "WINDOWS": "Windows",
+      "MACOS": "macOS",
+      "LINUX": "Linux"
+    },
+    "ownership": {
+      "COMPANY_MANAGED": "company computer",
+      "BYOD": "personal computer"
+    },
+    "deviceStatus": {
+      "PENDING": "Waiting for approval",
+      "ACTIVE": "Connected",
+      "REVOKED": "Disconnected"
+    }
+  },
+  "screenshots": {
+    "gallery": "Screenshots",
+    "date": "Day",
+    "count_one": "{{count}} screenshot",
+    "count_other": "{{count}} screenshots",
+    "none": "No screenshots on this day.",
+    "skipped": "Not taken",
+    "viewAt": "View screenshot taken at {{time}}",
+    "at": "Screenshot at {{time}}",
+    "reason": "Reason",
+    "dispute": "Dispute",
+    "download": "Download (watermarked)",
+    "delete": "Delete",
+    "whoViewed": "Who looked at it",
+    "byYou": "you",
+    "bySomeone": "someone else",
+    "mineTitle": "My screenshots",
+    "mineSubtitle": "Every screenshot taken of your screen, who looked at it, and your disputes. Opening one is recorded too.",
+    "myDisputes": "My disputes",
+    "noDisputes": "No disputes.",
+    "incident": "Report a privacy problem",
+    "incidentHelp": "For example, if something personal was captured or the app ran when it should not have. A screenshot you dispute is hidden from managers at once.",
+    "whatHappened": "What happened?",
+    "incidentSent": "Sent. A privacy reviewer will look at it.",
+    "send": "Send report",
+    "reviewTitle": "Screenshot review",
+    "reviewSubtitle": "Screenshots of people in your scope. Every view and download is recorded and visible to the person.",
+    "person": "Person",
+    "status": {
+      "AVAILABLE": "Available",
+      "UNDER_DISPUTE": "Under review",
+      "PROCESSING": "Processing",
+      "UPLOADED": "Processing",
+      "INVALID": "Rejected",
+      "DELETED": "Deleted",
+      "SLOT_ISSUED": "Pending"
+    },
+    "skip": {
+      "EXCLUDED_APP": "excluded app",
+      "IDLE": "idle",
+      "ON_BREAK": "on a break",
+      "SCREEN_LOCKED": "screen locked",
+      "NO_PERMISSION": "no permission",
+      "POLICY_OUTDATED": "policy changed",
+      "OFFLINE": "offline",
+      "OTHER": "could not check"
+    },
+    "action": {
+      "LIST": "Listed",
+      "VIEW": "Viewed",
+      "DOWNLOAD": "Downloaded",
+      "EXPORT": "Exported",
+      "DELETE": "Deleted",
+      "DISPUTE": "Disputed",
+      "RESTORE": "Restored"
+    },
+    "disputeStatus": {
+      "OPEN": "Open",
+      "UNDER_REVIEW": "Under review",
+      "RESTORED": "Restored",
+      "DELETED": "Deleted",
+      "TIME_CORRECTED": "Time corrected"
+    }
+  },
+  "monitoringSettings": {
+    "title": "Screen monitoring",
+    "subtitle": "Off by default. It applies to a person only after this checklist is complete, their country allows it, its steps are done, the notice period has passed and they have read the notice.",
+    "noAccess": "You do not have access to monitoring settings.",
+    "tab": {
+      "countries": "Countries",
+      "checklist": "Checklist",
+      "policies": "Screenshot policies",
+      "devices": "Computers",
+      "reviews": "Disputes & incidents"
+    },
+    "countriesHelp": "What each country where you employ people allows. Entries marked “Provisional” have not been reviewed by lawyers: take your own legal advice. Countries without an entry stay off.",
+    "col": {
+      "country": "Country",
+      "people": "People",
+      "screenshots": "Screenshots",
+      "steps": "Required steps",
+      "retention": "Longest retention",
+      "notice": "Notice period"
+    },
+    "allowance": {
+      "ALLOWED": "Allowed",
+      "ALLOWED_WITH_STEPS": "Allowed with steps",
+      "NOT_ALLOWED": "Not allowed",
+      "UNKNOWN": "Unknown (off)"
+    },
+    "provisional": "Provisional",
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
+    "step": {
+      "WRITTEN_NOTICE": "Written notice given to employees",
+      "DPIA": "Data protection impact assessment done",
+      "WORKS_COUNCIL": "Works council or employee representatives agreed",
+      "PURPOSE_LIMITATION": "Use limited to the stated purpose",
+      "EMPLOYEE_CONSULTATION": "Employees consulted"
+    },
+    "current": "Current checklist",
+    "version": "Version {{version}}",
+    "currentHelp": "Notice starts {{date}} · review due {{review}}",
+    "status": {
+      "DRAFT": "Draft",
+      "ACTIVE": "Active",
+      "PAUSED": "Paused",
+      "SUPERSEDED": "Replaced"
+    },
+    "pause": "Pause all monitoring",
+    "resume": "Resume monitoring",
+    "checklist": "Monitoring checklist",
+    "newVersion": "New checklist version",
+    "checklistHelp": "Completing it starts the notice period. A completed checklist cannot change; make a new version instead.",
+    "f": {
+      "purpose": "Purpose (written for employees)",
+      "basis": "Lawful basis",
+      "explanation": "Why this basis applies",
+      "notice": "Notice shown to employees",
+      "noticeStartsOn": "Notice starts on",
+      "retention": "Keep screenshots for (days)",
+      "viewers": "Roles that may view screenshots",
+      "viewersHint": "Viewers also need the screenshot permission and the person in their scope. Managers do not get access automatically.",
+      "contactName": "Privacy contact",
+      "contactEmail": "Privacy contact email",
+      "grievanceEmail": "Complaints email",
+      "reviewDueOn": "Review this decision by",
+      "devices": "Computers",
+      "companyDevicesOnly": "Screenshots only on company computers (personal computers get session tracking only)",
+      "requireDeviceApproval": "New computers wait for an administrator’s approval",
+      "stepsFor": "Steps required in {{country}}",
+      "legalAdvice": "We took our own legal advice for every country in scope. The platform provides controls, not legal advice."
+    },
+    "basis": {
+      "LEGITIMATE_INTEREST": "Legitimate interest",
+      "CONTRACT": "Contract",
+      "LEGAL_OBLIGATION": "Legal obligation",
+      "CONSENT": "Consent"
+    },
+    "saveDraft": "Save draft",
+    "complete": "Complete the checklist",
+    "saved": "Draft saved.",
+    "completed": "Completed. Monitoring can start after the notice period, for people who read the notice.",
+    "policies": "Screenshot policies",
+    "noPolicies": "No policies yet.",
+    "newPolicy": "New screenshot policy",
+    "createPolicy": "Create policy",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "policySummary": "every {{interval}} min ±{{jitter}}% · kept {{days}} days · {{mode}}",
+    "mode": {
+      "FULL_SCREEN": "Full screen",
+      "BLURRED": "Blurred",
+      "ACTIVE_WINDOW": "Active window (not yet supported: nothing is captured)"
+    },
+    "p": {
+      "name": "Name",
+      "interval": "Every (minutes)",
+      "jitter": "Random variation (%)",
+      "mode": "What is captured",
+      "retention": "Keep (days)",
+      "from": "Starts on",
+      "excluded": "Never capture these apps (comma-separated)",
+      "excludedHint": "Leave empty to use the built-in list of password managers and messaging apps.",
+      "enabled": "Take screenshots",
+      "employeeCanDelete": "People may delete their own screenshots",
+      "noActivity": "Application activity tracking is not offered."
+    },
+    "approve": "Approve",
+    "resolutionNote": "Resolution note (required)",
+    "disputes": "Screenshot disputes",
+    "incidents": "Privacy incidents",
+    "resolveIncident": "Resolve and delete the screenshot",
+    "outcome": {
+      "RESTORED": "Restore",
+      "DELETED": "Delete",
+      "TIME_CORRECTED": "Restore and correct time"
+    }
   }
 }

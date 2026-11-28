@@ -12,6 +12,8 @@ import {
   NotebookPen,
   Sheet,
   PieChart,
+  Camera,
+  ScanEye,
   Radio,
   SlidersHorizontal,
   Receipt,
@@ -173,6 +175,12 @@ export function AppShell() {
             {t('nav.teamWork')}
           </NavLink>
         )}
+        {can('view_team_screenshots') && (
+          <NavLink to="/work/screenshot-review" className={link}>
+            <ScanEye aria-hidden="true" className="size-4" />
+            {t('nav.screenshotReview')}
+          </NavLink>
+        )}
         {can('reports.view') && (
           <NavLink to="/dashboards/remote-work" className={link}>
             <PieChart aria-hidden="true" className="size-4" />
@@ -229,6 +237,12 @@ export function AppShell() {
           <NavLink to="/settings/attendance" className={link}>
             <CalendarClock aria-hidden="true" className="size-4" />
             {t('nav.attendanceSettings')}
+          </NavLink>
+        )}
+        {can('manage_monitoring_policy') && (
+          <NavLink to="/settings/monitoring" className={link}>
+            <Camera aria-hidden="true" className="size-4" />
+            {t('nav.monitoringSettings')}
           </NavLink>
         )}
         {can('work.config.manage') && (

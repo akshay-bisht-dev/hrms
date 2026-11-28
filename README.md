@@ -4,7 +4,7 @@ Multi-tenant HRMS and remote workforce management SaaS for small and medium comp
 **JavaScript only:** React + Vite, Node.js + Express, Prisma + MySQL 8.4, Redis + BullMQ, and later an Electron desktop agent.
 
 - Planning and design: [`docs/`](docs) (Phases 1–5) · Sprint records: [`docs/sprints/`](docs/sprints)
-- Status: **Sprint 9 (Tasks, daily reports, timesheets, manager board, HR dashboard)** complete. Sprint records: [`docs/sprints/`](docs/sprints).
+- Status: **Sprint 10 (Desktop agent and screen monitoring)** complete, awaiting approval. Sprint records: [`docs/sprints/`](docs/sprints).
 
 ## Repository layout
 
@@ -13,6 +13,7 @@ apps/
   backend/      Express API (src/), Prisma schema + migrations (prisma/)
   worker/       BullMQ processors and the job scheduler
   frontend/     React 19 + Vite SPA (Tailwind 4, shadcn/ui-style components in JSX)
+  agent/        Electron desktop app: work sessions and, only where a company enabled and disclosed it, screenshots
 packages/
   shared/       Code shared by all apps: IDs, permission catalog, queue names, validation schemas
   payroll/      Payroll engine (decimal.js, safe formulas) and country packs; statutory rates live in versioned rule data
@@ -147,6 +148,14 @@ Then:
 npm run test:e2e
 ```
 
+The monitoring journey also drives the real desktop app, so it needs a display. On a headless Linux machine run the suite under Xvfb, with `xdotool` installed (the app uses it to see which application is in front; without it, every capture is skipped by design):
+
+```bash
+xvfb-run -a npm run test:e2e
+```
+
+Without a display, that one journey is skipped and the others run.
+
 Repository checks, lint and formatting:
 
 ```bash
@@ -158,6 +167,18 @@ Production build of the frontend:
 ```bash
 npm run build
 ```
+
+## Desktop app (development)
+
+The desktop app talks to the API at `HRMS_API_URL` (default `http://localhost:3000`; any other address must be HTTPS). Start it with:
+
+```bash
+HRMS_API_URL=http://localhost:3000 npm start -w apps/agent
+```
+
+In the web app, open **My work → Connect the desktop app** and enter the code in the app. Screenshots are taken only when the company completed **Settings → Monitoring**, the person's country allows it, the notice period has passed, the person read the notice, an administrator approved the computer, and a work session is running. Signing, notarization and auto-update come in Sprint 11; until then the app runs unpacked for development only.
+
+On Linux the app needs `xdotool` (X11). Wayland is not supported for screenshots.
 
 ## Production-like stack in Docker
 
@@ -188,5 +209,7 @@ docker build --secret id=extra_ca,src=/path/to/proxy-ca.pem -f infrastructure/do
 | E2E or manual sign-ins get "Too many attempts"                   | Per-IP and per-account limits work as designed. Locally, `docker compose exec redis redis-cli --scan --pattern 'rl:*' \| xargs docker compose exec -T redis redis-cli del`, or wait for the window to pass. `npm run test:e2e` clears them itself.           |
 | Past days show "Not recorded" in Team attendance                 | Day rows for people who didn't clock in are created by the roll-up job. Start the worker and run `npm run scheduler -w apps/worker` once. After changing shifts or rules, use Settings → Attendance → Recalculate.                                           |
 | A work session never shows "Disconnected" or never closes        | The sweeper runs in the worker. Start it and run `npm run scheduler -w apps/worker` once. The page sends a signal only while a work session runs.                                                                                                            |
+| Desktop app shows "last skipped: could not check"                | It can't tell which application is in front, so it skips the screenshot rather than risk capturing an excluded app. On Linux install `xdotool`; on macOS allow Accessibility for the app.                                                                    |
+| Desktop app: "Running as root without --no-sandbox"              | Only in containers running as root: start it with `--no-sandbox` and `HRMS_AGENT_CI_NO_OS_SANDBOX=1` (development builds only; packaged builds always use the OS sandbox).                                                                                   |
 | Clock-in says "Your sign-in is not linked to an employee record" | Link the account in Settings → Members, or invite the person from their employee profile (_Invite to sign in_).                                                                                                                                              |
 | Jest says "did not exit one second after the test run"           | A test left a Redis or DB connection open. BullMQ does not close connections it is given; close them in `afterAll`.                                                                                                                                          |

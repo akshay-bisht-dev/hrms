@@ -36,6 +36,9 @@ const FIRST_CAPTURE_MS =
     ? Number(process.env.HRMS_AGENT_FIRST_CAPTURE_MS)
     : null;
 
+// Development and tests only: a separate profile folder per run. Ignored in packaged builds.
+if (!app.isPackaged && process.env.HRMS_AGENT_USER_DATA)
+  app.setPath('userData', process.env.HRMS_AGENT_USER_DATA);
 if (!app.requestSingleInstanceLock()) app.quit();
 // The OS sandbox is on for every process. The only exception is an unpackaged build in a CI container that runs
 // as root (Chromium can't sandbox there); packaged builds ignore the variable.

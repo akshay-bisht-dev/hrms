@@ -6,6 +6,7 @@ let busy = false;
 
 const el = (tag, attrs = {}, ...children) => {
   const n = document.createElement(tag);
+  if (tag === 'button' && busy) n.disabled = true;
   for (const [k, v] of Object.entries(attrs)) {
     if (k === 'onClick') n.addEventListener('click', v);
     else if (k === 'text') n.textContent = v;
@@ -16,17 +17,31 @@ const el = (tag, attrs = {}, ...children) => {
 };
 const time = (d) => (d ? new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—');
 
+let lastError = null;
 async function run(fn) {
   if (busy) return;
   busy = true;
+  lastError = null;
+  render(); // buttons show as disabled while the action runs
   try {
     const r = await fn();
     if (r?.state) state = r.state;
-    render(r?.ok === false ? r.error : null);
+    lastError = r?.ok === false ? r.error : null;
+  } catch (e) {
+    lastError = e?.message ?? 'Something went wrong';
   } finally {
     busy = false;
+    render(lastError);
   }
 }
+
+// What the desktop app itself records (the web app's list talks about the browser).
+const RECORDED = [
+  'When you start and end a work session, and where you said you are working',
+  'When your breaks start and end',
+  'That this app is running: a small signal about once a minute, only while a session runs',
+  'When your computer has had no keyboard or mouse use for the time your policy sets (only that fact, never what you typed or clicked)',
+];
 
 const REASONS = {
   NOT_ACTIVATED: 'Your company has not turned on screen monitoring.',
@@ -144,7 +159,7 @@ function render(error = null) {
       el(
         'ul',
         {},
-        ...(s.work?.disclosure?.recorded ?? []).map((x) => el('li', {}, x)),
+        ...RECORDED.map((x) => el('li', {}, x)),
         s.monitoringOn
           ? el(
               'li',
@@ -228,7 +243,7 @@ function renderPairing(error) {
 
 window.agent.onState((s) => {
   state = s;
-  if (!busy) render();
+  if (!busy) render(lastError);
 });
 window.agent.getState().then((r) => {
   state = r.state;
