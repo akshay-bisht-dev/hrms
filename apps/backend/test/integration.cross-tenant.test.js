@@ -233,8 +233,12 @@ beforeAll(async () => {
       .expect(201)
   ).body.id;
   // B's owner works there too, so B's requests reach every lookup (and not "no employee record").
-  const bMembership = (await B.call('get', '/tenants/members').expect(200)).body.data.find((m) => m.email === B.email).id;
-  await B.call('put', `/tenants/members/${bMembership}/employee`).send({ employeeId: ids.bEmployee }).expect(204);
+  const bMembership = (await B.call('get', '/tenants/members').expect(200)).body.data.find(
+    (m) => m.email === B.email,
+  ).id;
+  await B.call('put', `/tenants/members/${bMembership}/employee`)
+    .send({ employeeId: ids.bEmployee })
+    .expect(204);
   ids.bRole = (await B.call('get', '/tenants/roles').expect(200)).body.data.find(
     (r) => r.systemKey === 'employee',
   ).id;
