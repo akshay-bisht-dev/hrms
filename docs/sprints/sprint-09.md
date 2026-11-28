@@ -1,6 +1,6 @@
 # Sprint 9 — Tasks, daily reports, timesheets, manager board and HR dashboard
 
-Status: **Awaiting approval** · Date: 2026-11-28 · Branch: `sprint-09/tasks-timesheets`
+Status: **Approved** · Date: 2026-11-28 · Branch: `sprint-09/tasks-timesheets`
 
 ## 1. Objectives
 Turn a work session into a full remote working day: the work people do (projects and tasks with time), what they report each day, and the weekly timesheet their manager approves. Managers get one board for status, tasks and approvals; HR gets company-wide remote-work figures. All of it works with the web app only, without the desktop agent.
@@ -166,4 +166,4 @@ README (status), Swagger, this record, screenshots in `docs/sprints/sprint-09/`.
 5. As HR with two-step verification: Work → Team status and Remote work.
 
 ## 12. Approval
-Waiting for the owner's approval.
+Approved by the owner on 2026-11-28; merged to `main` through a pull request after CI passed.
