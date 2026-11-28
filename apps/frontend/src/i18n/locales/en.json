@@ -38,7 +38,11 @@
     "teamWork": "Team status",
     "workSettings": "Work policies",
     "workSignal": "Work session running · signal on",
-    "workOnBreak": "On a break · session running"
+    "workOnBreak": "On a break · session running",
+    "tasks": "Tasks",
+    "dailyReport": "Daily report",
+    "timesheet": "Timesheet",
+    "remoteWork": "Remote work"
   },
   "status": {
     "title": "System status",
@@ -664,7 +668,11 @@
     "documentAttached": "Supporting document attached",
     "wfh": "Work-from-home requests",
     "workCorrections": "Work-session corrections",
-    "sessionWas": "Session {{from}} – {{to}}"
+    "sessionWas": "Session {{from}} – {{to}}",
+    "dailyReports": "Daily work reports",
+    "timesheets": "Timesheets",
+    "askChanges": "Ask for changes",
+    "changesWhat": "Ask for changes to {{what}}"
   },
   "attReport": {
     "title": "Attendance report",
@@ -1281,11 +1289,18 @@
       "sent_other": "Request sent for {{count}} days.",
       "days_one": "{{count}} day",
       "days_other": "{{count}} days"
+    },
+    "timer": {
+      "title": "Task timer",
+      "on": "Timing “{{title}}”.",
+      "none": "No task timer running.",
+      "allTasks": "All tasks",
+      "task": "Task"
     }
   },
   "teamWork": {
     "title": "Team status",
-    "subtitle": "Who is working right now and today’s totals.",
+    "subtitle": "Who is working right now, what they are working on, and what is waiting for you.",
     "counts": "Totals by status",
     "filter": "Show",
     "everyone": "Everyone",
@@ -1305,9 +1320,22 @@
       "location": "Location",
       "worked": "Worked today",
       "breaks": "Breaks",
-      "signal": "Last signal"
+      "signal": "Last signal",
+      "currentTask": "Working on",
+      "tasks": "Tasks"
     },
-    "privacy": "This page shows work status only: start and end times, breaks and whether the app is open. It never shows screens, applications, keystrokes or activity."
+    "privacy": "This page shows work status and tasks only: start and end times, breaks, whether the app is open, and the task being timed. It never shows screens, applications, keystrokes or activity.",
+    "waiting": "Waiting for you",
+    "overdue_one": "{{count}} overdue",
+    "overdue_other": "{{count}} overdue",
+    "taskCounts": "{{open}} open",
+    "waitingFor": {
+      "wfhRequests": "Work-from-home requests",
+      "workCorrections": "Session corrections",
+      "dailyReports": "Daily reports",
+      "timesheets": "Timesheets",
+      "taskReviews": "Task reviews"
+    }
   },
   "workSettings": {
     "title": "Work policies",
@@ -1353,5 +1381,166 @@
       "wfhRequiresApproval": "Each work-from-home day needs an approved request",
       "wfhMaxDaysPerMonth": "Most work-from-home days a month"
     }
+  },
+  "tasks": {
+    "title": "Tasks",
+    "subtitle": "Your work, the tasks you set, and your team’s. Time on a task is recorded only during a work session.",
+    "new": "New task",
+    "create": "Create task",
+    "views": "Task views",
+    "view": {
+      "mine": "My tasks",
+      "created": "Set by me",
+      "team": "My team",
+      "projects": "Projects"
+    },
+    "openOnly": "Open tasks only",
+    "count_one": "{{count}} task",
+    "count_other": "{{count}} tasks",
+    "none": "No tasks here.",
+    "due": "due {{date}}",
+    "spent": "{{time}} spent",
+    "overdue": "Overdue",
+    "startTimer": "Start timer",
+    "stopTimer": "Stop timer",
+    "startTimerFor": "Start timer for {{title}}",
+    "stopTimerFor": "Stop timer for {{title}}",
+    "priority": {
+      "LOW": "Low",
+      "MEDIUM": "Medium",
+      "HIGH": "High",
+      "URGENT": "Urgent"
+    },
+    "status": {
+      "ASSIGNED": "To do",
+      "IN_PROGRESS": "In progress",
+      "ON_HOLD": "On hold",
+      "UNDER_REVIEW": "In review",
+      "COMPLETED": "Done",
+      "CANCELLED": "Cancelled"
+    },
+    "moveTo": {
+      "ASSIGNED": "Back to to-do",
+      "IN_PROGRESS": "Start / reopen",
+      "ON_HOLD": "Put on hold",
+      "UNDER_REVIEW": "Send for review",
+      "COMPLETED": "Mark done",
+      "CANCELLED": "Cancel task"
+    },
+    "detail": "Task: {{title}}",
+    "needsApproval": "Needs approval",
+    "moveNote": "Note with the change (optional)",
+    "field": {
+      "priority": "Priority",
+      "dueDate": "Due",
+      "estimate": "Estimate",
+      "spent": "Time spent"
+    },
+    "comments": "Comments",
+    "noComments": "No comments yet.",
+    "addComment": "Add a comment",
+    "send": "Send",
+    "f": {
+      "title": "Title",
+      "project": "Project",
+      "noProject": "No project",
+      "assignee": "Who does it",
+      "me": "Me",
+      "priority": "Priority",
+      "dueDate": "Due date",
+      "estimate": "Estimate (hours)",
+      "requiresApproval": "Someone must approve the result",
+      "description": "Details (optional)"
+    },
+    "projects": {
+      "new": "New project",
+      "code": "Code",
+      "name": "Name",
+      "client": "Client (optional)",
+      "owner": "Owner",
+      "noOwner": "No owner",
+      "create": "Create project",
+      "none": "No projects yet.",
+      "noMembers": "No members yet.",
+      "addMember": "Add a member",
+      "add": "Add",
+      "open_one": "{{count}} open task",
+      "open_other": "{{count}} open tasks",
+      "status": {
+        "PLANNED": "Planned",
+        "ACTIVE": "Active",
+        "ON_HOLD": "On hold",
+        "COMPLETED": "Completed",
+        "ARCHIVED": "Archived"
+      }
+    },
+    "openTask": "Open task: {{title}}"
+  },
+  "reports": {
+    "previous": "Previous",
+    "next": "Next",
+    "dailyTitle": "Daily report",
+    "dailySubtitle": "Built from your work sessions and task time. Add notes, then submit it to your manager.",
+    "timesheetTitle": "Timesheet",
+    "timesheetSubtitle": "Your week, built from work sessions and task time. Submitting sends it for approval and locks the week’s time.",
+    "weekOf": "Week of {{date}}",
+    "worked": "Worked",
+    "onTasks": "On tasks",
+    "breaks": "Breaks",
+    "disconnected": "Disconnected",
+    "unallocated": "Not on a task",
+    "sessions": "Sessions",
+    "noSessions": "No work sessions.",
+    "tasks": "Tasks",
+    "noTasks": "No task time.",
+    "completed": "Completed",
+    "notes": "Notes for your manager",
+    "save": "Save notes",
+    "submit": "Submit report",
+    "saved": "Saved.",
+    "submitted": "Submitted to your manager.",
+    "reviewNote": "Reviewer’s note",
+    "task": "Task",
+    "total": "Total",
+    "submitWeek": "Submit timesheet",
+    "endSessionFirst": "End your running work session before submitting.",
+    "lockNote": "After you submit, time in this week can’t change unless your approver sends it back.",
+    "status": {
+      "DRAFT": "Not submitted",
+      "SUBMITTED": "Waiting for review",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "CHANGES_REQUESTED": "Changes requested"
+    }
+  },
+  "remoteDash": {
+    "title": "Remote work",
+    "subtitle": "Company-wide figures for a period. Totals only: no names, no individual activity.",
+    "from": "From",
+    "to": "To",
+    "now": "Right now",
+    "period": "In this period",
+    "headcount": "People",
+    "workingNow": "Working now",
+    "onBreakNow": "On a break",
+    "disconnectedNow": "Disconnected",
+    "avgDay": "Average worked per person-day",
+    "personDays_one": "{{count}} person-day",
+    "personDays_other": "{{count}} person-days",
+    "remoteShare": "Worked remotely",
+    "disconnectedShare": "Disconnected time",
+    "autoClosed": "Sessions closed automatically",
+    "needsReview_one": "{{count}} needs review",
+    "needsReview_other": "{{count}} need review",
+    "daily": "By day",
+    "pending": "Waiting for decisions",
+    "col": {
+      "date": "Date",
+      "people": "People working",
+      "remotePeople": "Of them remote",
+      "worked": "Worked",
+      "remote": "Worked remotely"
+    },
+    "privacy": "Built from work sessions only. Individual records stay with each person and their approvers."
   }
 }

@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { Coffee, Eye, EyeOff, Home, Play, Square, Wrench } from 'lucide-react';
 import { clock, REQUEST_TONE } from '@/services/attendance';
 import { hms, SEGMENT_CLASS, SESSION_TONE, workApi } from '@/services/work';
+import { tasksApi } from '@/services/tasks';
+import { Link } from 'react-router';
 import { useWorkStatus, WORK_STATUS_KEY, zonedIso } from '@/hooks/useWorkSession';
 import { FormMessages, useFormAction } from '@/hooks/useFormAction';
 import { Alert } from '@/components/ui/alert';
@@ -45,6 +47,7 @@ function MyWork({ status }) {
   return (
     <>
       <SessionCard status={status} />
+      {status.active && status.active.status !== 'ON_BREAK' && <TaskTimer />}
       <Disclosure status={status} />
       <Today status={status} onFix={setFixing} />
       {fixing && (
@@ -93,6 +96,7 @@ function SessionCard({ status }) {
       setError(null);
       qc.setQueryData(WORK_STATUS_KEY, next);
       qc.invalidateQueries({ queryKey: ['work'] });
+      qc.invalidateQueries({ queryKey: ['tasks'] });
       qc.invalidateQueries({ queryKey: ['attendance'] });
     },
     onError: (e) => {
@@ -689,6 +693,82 @@ function MyCorrections({ tz }) {
           </li>
         ))}
       </ul>
+    </section>
+  );
+}
+
+/** The task being timed, and a quick way to start one. Timers run only during the session and stop on a break. */
+function TaskTimer() {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const timer = useQuery({ queryKey: ['tasks', 'timer'], queryFn: tasksApi.timer, refetchInterval: 60_000 });
+  const open = useQuery({
+    queryKey: ['tasks', 'list', 'mine', 'timer'],
+    queryFn: () => tasksApi.list({ view: 'mine', open: 'true' }),
+  });
+  const [taskId, setTaskId] = useState('');
+  const act = useMutation({
+    mutationFn: (fn) => fn(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+  });
+  const running = timer.data?.timer;
+  const startable = (open.data?.data ?? []).filter((x) =>
+    ['ASSIGNED', 'IN_PROGRESS', 'ON_HOLD'].includes(x.status),
+  );
+  return (
+    <section
+      aria-label={t('work.timer.title')}
+      className={`${card} flex flex-wrap items-end justify-between gap-3 p-5`}
+    >
+      <div className="flex flex-col gap-1">
+        <h2 className="text-base font-semibold">{t('work.timer.title')}</h2>
+        <p className="text-sm">
+          {running ? t('work.timer.on', { title: running.task?.title ?? '' }) : t('work.timer.none')}{' '}
+          <Link className="text-primary underline" to="/work/tasks">
+            {t('work.timer.allTasks')}
+          </Link>
+        </p>
+      </div>
+      <div className="flex flex-wrap items-end gap-3">
+        {running ? (
+          <Button
+            variant="secondary"
+            disabled={act.isPending}
+            onClick={() => act.mutate(() => tasksApi.stopTimer())}
+          >
+            <Square aria-hidden="true" className="size-4" />
+            {t('tasks.stopTimer')}
+          </Button>
+        ) : startable.length > 0 ? (
+          <>
+            <SelectField
+              label={t('work.timer.task')}
+              value={taskId}
+              onChange={(e) => setTaskId(e.target.value)}
+            >
+              <option value="">{t('resource.choose')}</option>
+              {startable.map((x) => (
+                <option key={x.id} value={x.id}>
+                  {x.project ? `${x.project.code} · ` : ''}
+                  {x.title}
+                </option>
+              ))}
+            </SelectField>
+            <Button
+              disabled={!taskId || act.isPending}
+              onClick={() => act.mutate(() => tasksApi.startTimer(taskId))}
+            >
+              <Play aria-hidden="true" className="size-4" />
+              {t('tasks.startTimer')}
+            </Button>
+          </>
+        ) : null}
+      </div>
+      {act.isError && (
+        <div className="w-full">
+          <Alert tone="error">{errorMessage(act.error, t)}</Alert>
+        </div>
+      )}
     </section>
   );
 }

@@ -4,7 +4,7 @@ Multi-tenant HRMS and remote workforce management SaaS for small and medium comp
 **JavaScript only:** React + Vite, Node.js + Express, Prisma + MySQL 8.4, Redis + BullMQ, and later an Electron desktop agent.
 
 - Planning and design: [`docs/`](docs) (Phases 1–5) · Sprint records: [`docs/sprints/`](docs/sprints)
-- Status: **Sprint 8 (Work Status: work from home, sessions, breaks, corrections)** complete. Sprint records: [`docs/sprints/`](docs/sprints).
+- Status: **Sprint 9 (Tasks, daily reports, timesheets, manager board, HR dashboard)** complete, awaiting approval. Sprint records: [`docs/sprints/`](docs/sprints).
 
 ## Repository layout
 

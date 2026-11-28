@@ -26,6 +26,9 @@ import { ApprovalsPage } from '@/pages/attendance/ApprovalsPage';
 import { AttendanceReportPage } from '@/pages/attendance/AttendanceReportPage';
 import { MyWorkPage } from '@/pages/work/MyWorkPage';
 import { TeamWorkPage } from '@/pages/work/TeamWorkPage';
+import { TasksPage } from '@/pages/work/TasksPage';
+import { DailyReportPage, TimesheetPage } from '@/pages/work/ReportPages';
+import { RemoteWorkDashboardPage } from '@/pages/work/RemoteWorkDashboardPage';
 import { WorkSettingsPage } from '@/pages/settings/WorkSettingsPage';
 import { AttendanceSettingsPage } from '@/pages/settings/AttendanceSettingsPage';
 import { MyLeavePage } from '@/pages/leave/MyLeavePage';
@@ -75,6 +78,10 @@ export const routes = [
           { path: 'settings/attendance', element: <AttendanceSettingsPage /> },
           { path: 'work', element: <MyWorkPage /> },
           { path: 'work/team', element: <TeamWorkPage /> },
+          { path: 'work/tasks', element: <TasksPage /> },
+          { path: 'work/report', element: <DailyReportPage /> },
+          { path: 'work/timesheet', element: <TimesheetPage /> },
+          { path: 'dashboards/remote-work', element: <RemoteWorkDashboardPage /> },
           { path: 'settings/work', element: <WorkSettingsPage /> },
           { path: 'leave', element: <MyLeavePage /> },
           { path: 'leave/calendar', element: <WhosAwayPage /> },

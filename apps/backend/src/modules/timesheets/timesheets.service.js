@@ -408,7 +408,7 @@ export function createTimesheetsService({ work, mfaEnforce = true, now = () => n
       const { summary, running } = await weekSummary(emp, ws);
       if (running)
         throw new ConflictError('session_running', 'End your work session before submitting the week');
-      if (!summary.totalSec && !summary.taskSec)
+      if (!summary.days.some((d) => d.sessions > 0) && !summary.taskSec)
         throw new ConflictError('nothing_to_report', 'There is no work recorded in this week');
       const data = {
         totalSec: summary.totalSec,

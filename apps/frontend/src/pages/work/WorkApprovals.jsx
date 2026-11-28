@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { clock } from '@/services/attendance';
 import { hms, workApi } from '@/services/work';
+import { tasksApi } from '@/services/tasks';
 import { Alert } from '@/components/ui/alert';
 import { errorMessage } from '@/utils/errors';
 
@@ -12,11 +13,116 @@ export function WorkApprovals({ DecisionControls }) {
     <>
       <WfhApprovals DecisionControls={DecisionControls} />
       <CorrectionApprovals DecisionControls={DecisionControls} />
+      <ReportApprovals />
+      <TimesheetApprovals />
     </>
   );
 }
 
-function useDecision(fn) {
+/** Approve, ask for changes or reject, with a note (required unless approving). */
+function ReviewControls({ onDecide, pending, label }) {
+  const { t } = useTranslation();
+  const [comment, setComment] = useState('');
+  const send = (decision) => onDecide({ decision, ...(comment.trim() ? { comment: comment.trim() } : {}) });
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <input
+        aria-label={t('approvals.comment', { what: label })}
+        placeholder={t('approvals.commentPlaceholder')}
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        className="h-9 w-56 max-w-full rounded-[var(--radius-control)] border border-border-strong bg-surface px-3 text-sm"
+      />
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => send('APPROVED')}
+        aria-label={t('approvals.approveWhat', { what: label })}
+        className="h-9 rounded-[var(--radius-control)] bg-primary px-3 text-sm font-medium text-white disabled:opacity-50"
+      >
+        {t('approvals.approve')}
+      </button>
+      <button
+        type="button"
+        disabled={pending || !comment.trim()}
+        title={comment.trim() ? undefined : t('approvals.rejectNeedsNote')}
+        onClick={() => send('CHANGES_REQUESTED')}
+        aria-label={t('approvals.changesWhat', { what: label })}
+        className="h-9 rounded-[var(--radius-control)] border border-border-strong px-3 text-sm disabled:opacity-50"
+      >
+        {t('approvals.askChanges')}
+      </button>
+    </div>
+  );
+}
+
+function ReportApprovals() {
+  const { t } = useTranslation();
+  const list = useQuery({
+    queryKey: ['reports', 'approvals'],
+    refetchOnMount: 'always', // an inbox is always current when opened
+    queryFn: () => tasksApi.reports({ view: 'approvals', status: 'SUBMITTED' }),
+  });
+  const decide = useDecision(tasksApi.decideReport, ['reports']);
+  return (
+    <Section title={t('approvals.dailyReports')} query={list} error={decide.error}>
+      {(r) => (
+        <li key={r.id} className="flex flex-col gap-3 px-5 py-4 text-sm">
+          <div className="flex flex-col gap-0.5">
+            <span className="font-medium">
+              {r.employee.name} · {r.workDate}
+            </span>
+            <span>
+              {t('reports.worked')} {hms(r.summary?.workedSec)} · {t('reports.onTasks')}{' '}
+              {hms(r.summary?.taskSec)}
+              {r.summary?.tasks?.length ? ` · ${r.summary.tasks.map((x) => x.title).join(', ')}` : ''}
+            </span>
+            {r.notes && <span className="text-text-muted">“{r.notes}”</span>}
+          </div>
+          <ReviewControls
+            label={`${r.employee.name} ${r.workDate}`}
+            pending={decide.isPending}
+            onDecide={(body) => decide.mutate({ id: r.id, body })}
+          />
+        </li>
+      )}
+    </Section>
+  );
+}
+
+function TimesheetApprovals() {
+  const { t } = useTranslation();
+  const list = useQuery({
+    queryKey: ['timesheets', 'approvals'],
+    refetchOnMount: 'always', // an inbox is always current when opened
+    queryFn: () => tasksApi.timesheets({ view: 'approvals', status: 'SUBMITTED' }),
+  });
+  const decide = useDecision(tasksApi.decideTimesheet, ['timesheets']);
+  return (
+    <Section title={t('approvals.timesheets')} query={list} error={decide.error}>
+      {(r) => (
+        <li key={r.id} className="flex flex-col gap-3 px-5 py-4 text-sm">
+          <div className="flex flex-col gap-0.5">
+            <span className="font-medium">
+              {r.employee.name} · {t('reports.weekOf', { date: r.weekStart })}
+            </span>
+            <span>
+              {t('reports.worked')} {hms(r.totalSec)} · {t('reports.onTasks')} {hms(r.breakdown?.taskSec)} ·{' '}
+              {t('reports.unallocated')} {hms(r.breakdown?.unallocatedSec)}
+            </span>
+          </div>
+          <ReviewControls
+            label={`${r.employee.name} ${r.weekStart}`}
+            pending={decide.isPending}
+            onDecide={(body) => decide.mutate({ id: r.id, body })}
+          />
+        </li>
+      )}
+    </Section>
+  );
+}
+
+function useDecision(fn, keys = ['work']) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [error, setError] = useState(null);
@@ -24,7 +130,7 @@ function useDecision(fn) {
     mutationFn: ({ id, body }) => fn(id, body),
     onSuccess: () => {
       setError(null);
-      qc.invalidateQueries({ queryKey: ['work'] });
+      qc.invalidateQueries({ queryKey: keys });
     },
     onError: (e) => setError(errorMessage(e, t)),
   });
@@ -61,6 +167,7 @@ function WfhApprovals({ DecisionControls }) {
   const { t } = useTranslation();
   const list = useQuery({
     queryKey: ['work', 'wfh', 'approvals'],
+    refetchOnMount: 'always', // an inbox is always current when opened
     queryFn: () => workApi.wfh({ view: 'approvals', status: 'PENDING' }),
   });
   const decide = useDecision(workApi.decideWfh);
@@ -95,6 +202,7 @@ function CorrectionApprovals({ DecisionControls }) {
   const { t, i18n } = useTranslation();
   const list = useQuery({
     queryKey: ['work', 'corrections', 'approvals'],
+    refetchOnMount: 'always', // an inbox is always current when opened
     queryFn: () => workApi.corrections({ view: 'approvals', status: 'PENDING' }),
   });
   const decide = useDecision(workApi.decideCorrection);
