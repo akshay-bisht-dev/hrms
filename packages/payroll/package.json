@@ -1,0 +1,27 @@
+{
+  "name": "@hrms/payroll",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Country-pluggable payroll engine: pure functions over decimal.js, with country packs that apply rule data (no statutory rates in code).",
+  "exports": {
+    ".": "./src/index.js",
+    "./money": "./src/money.js",
+    "./formula": "./src/formula.js",
+    "./engine": "./src/engine.js",
+    "./packs": "./src/packs/index.js",
+    "./packs/in": "./src/packs/in.js",
+    "./rules/in": "./src/rules/in.js",
+    "./templates": "./src/templates.js"
+  },
+  "scripts": {
+    "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js"
+  },
+  "dependencies": {
+    "decimal.js": "^10.6.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {}
+  }
+}

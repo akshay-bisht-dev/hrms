@@ -296,6 +296,35 @@ export function createLeaveService({ attendance, queues, now = () => new Date() 
     });
   }
 
+  /**
+   * Leave inside a payroll period whose inputs are locked (or that is already calculated, approved or paid) cannot
+   * change: loss of pay was taken from it. Payroll has to unlock the run first.
+   * @param {any} r
+   */
+  async function assertNotPayrollLocked(r) {
+    const emp = await db().employee.findUnique({
+      where: { id: r.employeeId },
+      select: { legalEntityId: true },
+    });
+    const locked = await db().payrollRun.count({
+      where: {
+        status: {
+          in: ['INPUTS_LOCKED', 'CALCULATING', 'CALCULATED', 'REVIEWED', 'APPROVED', 'FINALIZED', 'PAID'],
+        },
+        period: {
+          legalEntityId: emp?.legalEntityId,
+          startDate: { lte: r.toDate },
+          endDate: { gte: r.fromDate },
+        },
+      },
+    });
+    if (locked)
+      throw new ConflictError(
+        'period_locked',
+        'These dates are in a locked payroll period. Ask payroll to unlock the run first.',
+      );
+  }
+
   const service = {
     policyFor,
 
@@ -611,6 +640,7 @@ export function createLeaveService({ attendance, queues, now = () => new Date() 
         throw new NotFoundError();
       }
       if (!(await canDecide(r, current, steps))) throw new NotFoundError();
+      await assertNotPayrollLocked(r);
       const last = current.stepNo === steps.at(-1)?.stepNo;
       const total = centi(r.totalQuantity);
       if (input.decision === 'APPROVED' && last && r.leaveType.isPaid && !r.leaveType.allowNegative) {
@@ -688,6 +718,7 @@ export function createLeaveService({ attendance, queues, now = () => new Date() 
       if (!own && !hr) throw new NotFoundError();
       if (!['PENDING', 'APPROVED'].includes(r.status))
         throw new ConflictError('not_cancellable', 'Only pending or approved requests can be cancelled');
+      if (r.status === 'APPROVED') await assertNotPayrollLocked(r);
       if (own && r.status === 'APPROVED' && /** @type {string} */ (dateToYmd(r.fromDate)) <= today)
         throw new ConflictError('already_started', 'This leave has started. Ask HR to cancel it.');
       const t = now();

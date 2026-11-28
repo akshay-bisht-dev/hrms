@@ -5,6 +5,7 @@
 import { apiRouter } from '../src/routes/index.js';
 import { listRoutes } from '../src/lib/route-registry.js';
 import request from 'supertest';
+import { runWithContext } from '../src/lib/context.js';
 import { startHarness } from './helpers/harness.js';
 
 let h;
@@ -153,6 +154,44 @@ beforeAll(async () => {
       reason: 'A trip',
     })
   ).id;
+  // Payroll: India starter, a salary, and one run taken all the way to a finalized run with a payslip.
+  const inTenantA = (fn) => runWithContext({ requestId: 'xt', tenantId: A.tenantId, userId: A.userId }, fn);
+  ids.payStructure = (await post('/payroll/starter/in', { legalEntityId: ids.legalEntity })).structure.id;
+  const payComponents = Object.fromEntries(
+    (await A.call('get', '/payroll/components?limit=200').expect(200)).body.data.map((c) => [c.code, c.id]),
+  );
+  ids.payComponent = payComponents.REIMB;
+  await post(`/payroll/employees/${emp.id}/salaries`, {
+    structureId: ids.payStructure,
+    annualCtc: '600000',
+    effectiveFrom: '2026-01-05',
+    reason: 'JOINING',
+  });
+  ids.payRun = (await post('/payroll/runs', { legalEntityId: ids.legalEntity, month: '2026-10' })).id;
+  ids.payInput = (
+    await post(`/payroll/runs/${ids.payRun}/inputs`, {
+      employeeId: emp.id,
+      componentId: ids.payComponent,
+      amount: '100',
+    })
+  ).id;
+  await A.call('post', `/payroll/runs/${ids.payRun}/lock`).expect(200);
+  await A.call('post', `/payroll/runs/${ids.payRun}/calculate`).expect(202);
+  await inTenantA(() => h.services.payrollRuns.calculate(ids.payRun));
+  ids.payRunEmployee = (
+    await A.call('get', `/payroll/runs/${ids.payRun}/employees`).expect(200)
+  ).body.data[0].id;
+  await A.call('post', `/payroll/runs/${ids.payRun}/review`).send({}).expect(200);
+  const aChecker = await h.enableMfa(await h.member(A, ['finance_manager'], 'achecker'));
+  await aChecker.call('post', `/payroll/runs/${ids.payRun}/approve`).expect(200);
+  await aChecker.call('post', `/payroll/runs/${ids.payRun}/finalize`).expect(200);
+  await inTenantA(() => h.services.payrollRuns.generatePayslips(ids.payRun));
+  ids.payslip = (await A.call('get', '/payroll/payslips/me').expect(200)).body.data[0].id;
+  ids.taxDeclaration = (
+    await A.call('put', '/payroll/tax-declarations/me/2026-27')
+      .send({ regime: 'NEW', deductions: {} })
+      .expect(200)
+  ).body.id;
   ids.bRole = (await B.call('get', '/tenants/roles').expect(200)).body.data.find(
     (r) => r.systemKey === 'employee',
   ).id;
@@ -172,6 +211,44 @@ function fixtureFor(method, path) {
     [/^\/companies\/work-locations\/:id$/, { id: ids.workLocation }, { name: 'Pwned' }],
     [/^\/attendance\/shifts\/:id$/, { id: ids.shift }, { name: 'Pwned' }],
     [/^\/leaves\/(balances|ledger)\/:id$/, { id: ids.employee }, undefined],
+    [/^\/payroll\/legal-entities\/:id\/statutory-keys$/, { id: ids.legalEntity }, undefined],
+    [
+      /^\/payroll\/legal-entities\/:id\/statutory-settings$/,
+      { id: ids.legalEntity },
+      { settings: { ptState: 'KA' }, effectiveFrom: '2030-01-01' },
+    ],
+    [
+      /^\/payroll\/legal-entities\/:id\/settings$/,
+      { id: ids.legalEntity },
+      { paidDaysBasis: 'CALENDAR', lopFromAbsence: false, payDayOfMonth: null },
+    ],
+    [/^\/payroll\/components\/:id$/, { id: ids.payComponent }, { name: 'Pwned' }],
+    [/^\/payroll\/structures\/:id$/, { id: ids.payStructure }, { name: 'Pwned' }],
+    [
+      /^\/payroll\/structures\/:id\/components$/,
+      { id: ids.payStructure },
+      { components: [{ componentId: ids.payComponent, sequence: 1 }] },
+    ],
+    [
+      /^\/payroll\/employees\/:id\/salaries$/,
+      { id: ids.employee },
+      { structureId: ids.payStructure, annualCtc: '1', effectiveFrom: '2030-01-01', reason: 'REVISION' },
+    ],
+    [/^\/payroll\/runs\/:id\/reject$/, { id: ids.payRun }, { comment: 'Pwned' }],
+    [
+      /^\/payroll\/runs\/:id\/inputs$/,
+      { id: ids.payRun },
+      { employeeId: ids.employee, componentId: ids.payComponent, amount: '1' },
+    ],
+    [/^\/payroll\/runs\/:id\/inputs\/:childId$/, { id: ids.payRun, childId: ids.payInput }, undefined],
+    [
+      /^\/payroll\/runs\/:id\/employees\/:childId$/,
+      { id: ids.payRun, childId: ids.payRunEmployee },
+      undefined,
+    ],
+    [/^\/payroll\/runs\/:id(\/[a-z-]+)?$/, { id: ids.payRun }, {}],
+    [/^\/payroll\/payslips\/:id\/download-url$/, { id: ids.payslip }, undefined],
+    [/^\/payroll\/tax-declarations\/:id\/review$/, { id: ids.taxDeclaration }, { decision: 'VERIFIED' }],
     [/^\/leaves\/requests\/:id(\/cancel)?$/, { id: ids.leaveRequest }, {}],
     [/^\/leaves\/requests\/:id\/decision$/, { id: ids.leaveRequest }, { decision: 'APPROVED' }],
     [/^\/leaves\/types\/:id$/, { id: ids.leaveType }, { name: 'Pwned' }],
@@ -265,8 +342,10 @@ function fixtureFor(method, path) {
 }
 
 test('every id route answers 404 to another tenant (generated from the route registry)', async () => {
+  // Self-service routes whose parameter is not an id (they always answer with the caller's own data).
+  const SELF = [/^\/payroll\/tax-declarations\/me\/:fy$/];
   const routes = listRoutes(apiRouter(h.services.routes)).filter(
-    (r) => r.path.includes(':') && r.access !== 'public',
+    (r) => r.path.includes(':') && r.access !== 'public' && !SELF.some((re) => re.test(r.path)),
   );
   expect(routes.length).toBeGreaterThan(30);
   const unmapped = routes.filter((r) => !fixtureFor(r.method, r.path)).map((r) => `${r.method} ${r.path}`);
@@ -308,6 +387,11 @@ test("tenant B's lists never contain tenant A's records", async () => {
     '/attendance/overtime',
     '/leaves/types',
     '/leaves/policies',
+    '/payroll/components?limit=200',
+    '/payroll/structures?limit=200',
+    '/payroll/runs',
+    '/payroll/payslips/me',
+    '/payroll/tax-declarations',
     '/leaves/policy-assignments',
     '/leaves/requests?view=approvals',
     '/leaves/requests?view=team',
@@ -362,6 +446,11 @@ test("tenant B cannot create records that point at tenant A's records", async ()
     [
       '/leaves/policy-assignments',
       { policyId: ids.leavePolicy, appliesTo: 'COMPANY', effectiveFrom: '2030-01-01' },
+    ],
+    ['/payroll/runs', { legalEntityId: ids.legalEntity, month: '2030-01' }],
+    [
+      '/payroll/structures',
+      { legalEntityId: ids.legalEntity, name: 'X', currency: 'INR', effectiveFrom: '2030-01-01' },
     ],
     [
       '/leaves/policies',
@@ -434,6 +523,13 @@ test("tenant A's data is unchanged after all of that", async () => {
     'PENDING',
   );
   expect((await A.call('get', `/leaves/types/${ids.leaveType}`).expect(200)).body.code).toBe('UNPAID');
+  expect((await A.call('get', `/payroll/runs/${ids.payRun}`).expect(200)).body).toMatchObject({
+    status: 'FINALIZED',
+  });
+  expect((await A.call('get', `/payroll/runs/${ids.payRun}/inputs`).expect(200)).body.data).toHaveLength(1);
+  expect(
+    (await A.call('get', `/payroll/employees/${ids.employee}/salaries`).expect(200)).body.data,
+  ).toHaveLength(1);
   // B's HR cannot adjust A's employee's balance either.
   await B.call('post', '/leaves/adjustments')
     .send({

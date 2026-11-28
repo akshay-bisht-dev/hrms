@@ -363,3 +363,29 @@ enum FnfStatus {
   APPROVED
   PAID
 }
+
+/// How a legal entity's payroll counts days. One row per legal entity; defaults apply when there is none.
+model PayrollSetting {
+  id             String        @id @db.Char(36)
+  tenantId       String        @map("tenant_id") @db.Char(36)
+  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  legalEntityId  String        @map("legal_entity_id") @db.Char(36)
+  /// CALENDAR: the month's calendar days; FIXED_30: every month counts as 30 days.
+  paidDaysBasis  PaidDaysBasis @default(CALENDAR) @map("paid_days_basis")
+  /// Count ABSENT attendance days (and half of HALF_DAY days) as loss of pay, in addition to unpaid leave.
+  lopFromAbsence Boolean       @default(false) @map("lop_from_absence")
+  /// Day of the month salaries are paid; null = the last day of the period.
+  payDayOfMonth  Int?          @map("pay_day_of_month")
+  createdAt      DateTime      @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.DateTime(3)
+  legalEntity    LegalEntity   @relation(fields: [tenantId, legalEntityId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, legalEntityId])
+  @@map("payroll_settings")
+}
+
+enum PaidDaysBasis {
+  CALENDAR
+  FIXED_30
+}

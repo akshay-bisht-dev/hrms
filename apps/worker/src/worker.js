@@ -11,6 +11,8 @@ import { createFilesProcessor, createImportsProcessor } from './processors/tenan
 import { createWorkSessionsProcessor } from './processors/work-sessions.js';
 import { createAttendanceService } from '@hrms/backend/modules/attendance/attendance.service.js';
 import { createLeaveService } from '@hrms/backend/modules/leave/leave.service.js';
+import { createPayrollConfigService } from '@hrms/backend/modules/payroll/config.service.js';
+import { createPayrollRunService } from '@hrms/backend/modules/payroll/run.service.js';
 import { initDb, closeDb, platformDb } from '@hrms/backend/lib/db.js';
 import { createS3, storage } from '@hrms/backend/lib/storage.js';
 import { createCipher } from '@hrms/backend/lib/crypto.js';
@@ -59,6 +61,15 @@ const employees = createEmployeesService({
 const imports = createImportsService({ employees, files, buckets });
 const attendance = createAttendanceService();
 const leave = createLeaveService({ attendance });
+const payrollConfig = createPayrollConfigService();
+const payrollRuns = createPayrollRunService({
+  config: payrollConfig,
+  files,
+  buckets,
+  ...(config.DATA_ENCRYPTION_KEY
+    ? { cipher: createCipher(Buffer.from(config.DATA_ENCRYPTION_KEY, 'base64')) }
+    : {}),
+});
 // Fan-out jobs enqueue per-tenant children on the same queue.
 const workSessionsQueue = new Queue(QUEUES.WORK_SESSIONS, {
   connection,
@@ -89,6 +100,7 @@ const workers = [
         attendance,
         employees,
         leave,
+        payrollRuns,
         platformDb,
         queue: workSessionsQueue,
         logger,

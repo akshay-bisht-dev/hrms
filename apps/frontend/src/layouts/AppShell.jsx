@@ -7,6 +7,8 @@ import {
   CalendarClock,
   CalendarDays,
   Plane,
+  Receipt,
+  Wallet,
   CheckSquare,
   Clock,
   Contact,
@@ -146,6 +148,22 @@ export function AppShell() {
           </NavLink>
         )}
         <span className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-text-muted">
+          {t('nav.payroll')}
+        </span>
+        <NavLink to="/payslips" className={link}>
+          <Receipt aria-hidden="true" className="size-4" />
+          {t('nav.payslips')}
+        </NavLink>
+        {(can('payroll.run.create') ||
+          can('payroll.run.review') ||
+          can('payroll.run.approve') ||
+          can('payroll.tax.review')) && (
+          <NavLink to="/payroll" className={link}>
+            <Wallet aria-hidden="true" className="size-4" />
+            {t('nav.payrollRuns')}
+          </NavLink>
+        )}
+        <span className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-text-muted">
           {t('nav.settings')}
         </span>
         <NavLink to="/settings/company" className={link}>
@@ -166,6 +184,12 @@ export function AppShell() {
           <NavLink to="/settings/leave" className={link}>
             <Plane aria-hidden="true" className="size-4" />
             {t('nav.leaveSettings')}
+          </NavLink>
+        )}
+        {can('payroll.config.manage') && (
+          <NavLink to="/settings/payroll" className={link}>
+            <Wallet aria-hidden="true" className="size-4" />
+            {t('nav.payrollSettings')}
           </NavLink>
         )}
         {can('members.invite') && (

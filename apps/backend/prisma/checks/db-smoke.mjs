@@ -431,6 +431,23 @@ await check(
   /Foreign key/i,
 );
 
+// Payroll (Sprint 7) -------------------------------------------------------------
+await check(
+  'payroll settings: pay day outside 1–31 rejected',
+  () =>
+    db.payrollSetting.create({
+      data: { id: id(), tenantId: A.t.id, legalEntityId: A.le.id, payDayOfMonth: 32, updatedAt: new Date() },
+    }),
+  /check|constraint/i,
+);
+await check(
+  'tenant B payroll settings cannot use tenant A legal entity (composite FK)',
+  () =>
+    db.payrollSetting.create({
+      data: { id: id(), tenantId: B.t.id, legalEntityId: A.le.id, updatedAt: new Date() },
+    }),
+  /Foreign key/i,
+);
 console.table(results);
 await db.$disconnect();
 process.exit(results.some((r) => r[1] !== 'pass') ? 1 : 0);
