@@ -7,6 +7,9 @@ import {
   CalendarClock,
   CalendarDays,
   Plane,
+  Laptop,
+  Radio,
+  SlidersHorizontal,
   Receipt,
   Wallet,
   CheckSquare,
@@ -25,6 +28,7 @@ import { apiFetch } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/utils/cn';
+import { useWorkSession } from '@/hooks/useWorkSession';
 
 /** Sidebar + content layout. The sidebar stacks above the content on narrow screens (no fixed widths). */
 export function AppShell() {
@@ -50,6 +54,9 @@ export function AppShell() {
       isActive ? 'bg-primary-soft font-semibold text-primary-hover' : 'text-slate-700 hover:bg-bg',
     );
   const needsMfa = me?.mfa.requiredForRole && !me?.mfa.enabled;
+  // Owns the work-session heartbeat for the whole app (only while a session runs).
+  const work = useWorkSession();
+  const working = work.data?.active ?? null;
   return (
     <div className="flex min-h-screen flex-wrap bg-bg">
       <a
@@ -89,6 +96,15 @@ export function AppShell() {
         ) : (
           <p className="px-2 pb-4 text-xs text-text-muted">{me?.tenant.name}</p>
         )}
+        {working && (
+          <Link
+            to="/work"
+            className="mx-2 mb-3 flex items-center gap-2 rounded-[var(--radius-control)] bg-success-soft px-3 py-2 text-xs font-medium text-emerald-900"
+          >
+            <Radio aria-hidden="true" className="size-3.5" />
+            {working.status === 'ON_BREAK' ? t('nav.workOnBreak') : t('nav.workSignal')}
+          </Link>
+        )}
         <NavLink to="/" end className={link}>
           <Activity aria-hidden="true" className="size-4" />
           {t('nav.systemStatus')}
@@ -126,6 +142,19 @@ export function AppShell() {
           <NavLink to="/attendance/reports" className={link}>
             <BarChart3 aria-hidden="true" className="size-4" />
             {t('nav.attendanceReports')}
+          </NavLink>
+        )}
+        <span className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-text-muted">
+          {t('nav.work')}
+        </span>
+        <NavLink to="/work" end className={link}>
+          <Laptop aria-hidden="true" className="size-4" />
+          {t('nav.myWork')}
+        </NavLink>
+        {can('view_team_work_status') && (
+          <NavLink to="/work/team" className={link}>
+            <UsersRound aria-hidden="true" className="size-4" />
+            {t('nav.teamWork')}
           </NavLink>
         )}
         <span className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-text-muted">
@@ -178,6 +207,12 @@ export function AppShell() {
           <NavLink to="/settings/attendance" className={link}>
             <CalendarClock aria-hidden="true" className="size-4" />
             {t('nav.attendanceSettings')}
+          </NavLink>
+        )}
+        {can('work.config.manage') && (
+          <NavLink to="/settings/work" className={link}>
+            <SlidersHorizontal aria-hidden="true" className="size-4" />
+            {t('nav.workSettings')}
           </NavLink>
         )}
         {(can('leave.config.manage') || can('leave.balance.adjust')) && (

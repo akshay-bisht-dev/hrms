@@ -448,6 +448,110 @@ await check(
     }),
   /Foreign key/i,
 );
+// Work status (Sprint 8) ---------------------------------------------------------
+const policyRow = (extra) => ({
+  id: id(),
+  tenantId: A.t.id,
+  name: `P ${id()}`,
+  appliesTo: 'COMPANY',
+  effectiveFrom: new Date('2026-01-01'),
+  createdBy: id(),
+  ...extra,
+});
+await check(
+  'work policy: allowed window must end after it starts',
+  () => db.workPolicy.create({ data: policyRow({ allowedStartMin: 600, allowedEndMin: 540 }) }),
+  /check|constraint/i,
+);
+await check(
+  'work policy: company-wide policy cannot have a target',
+  () => db.workPolicy.create({ data: policyRow({ targetId: A.emp.id }) }),
+  /check|constraint/i,
+);
+await check(
+  'work policy: heartbeat timeout below a minute rejected',
+  () => db.workPolicy.create({ data: policyRow({ heartbeatTimeoutSec: 10 }) }),
+  /check|constraint/i,
+);
+await check(
+  'work session cannot end before it starts',
+  () =>
+    db.workSession.update({
+      where: { id: ses.id },
+      data: { endedAt: new Date(ses.startedAt.getTime() - 1000) },
+    }),
+  /check|constraint/i,
+);
+await check(
+  'work session totals cannot be negative',
+  () => db.workSession.update({ where: { id: ses.id }, data: { workedSec: -1 } }),
+  /check|constraint/i,
+);
+await check(
+  'work correction must cover a positive time range',
+  () =>
+    db.workCorrection.create({
+      data: {
+        id: id(),
+        tenantId: A.t.id,
+        sessionId: ses.id,
+        employeeId: A.emp.id,
+        kind: 'ADD_WORK_TIME',
+        fromTs: new Date('2026-11-25T10:00:00Z'),
+        toTs: new Date('2026-11-25T10:00:00Z'),
+        reason: 'x',
+      },
+    }),
+  /check|constraint/i,
+);
+await check(
+  'WFH request cannot end before it starts',
+  () =>
+    db.wfhRequest.create({
+      data: {
+        id: id(),
+        tenantId: A.t.id,
+        employeeId: A.emp.id,
+        workLocationId: loc.id,
+        fromDate: new Date('2026-12-02'),
+        toDate: new Date('2026-12-01'),
+      },
+    }),
+  /check|constraint/i,
+);
+await check(
+  'tenant B WFH request cannot use tenant A work location (composite FK)',
+  () =>
+    db.wfhRequest.create({
+      data: {
+        id: id(),
+        tenantId: B.t.id,
+        employeeId: B.emp.id,
+        workLocationId: loc.id,
+        fromDate: new Date('2026-12-01'),
+        toDate: new Date('2026-12-01'),
+      },
+    }),
+  /Foreign key/i,
+);
+await check(
+  'session event delete blocked',
+  () => db.workSessionEvent.delete({ where: { id: ev.id } }),
+  /IMMUTABLE/,
+);
+await check('system clock-out punch accepted', () =>
+  db.attendancePunch.create({
+    data: {
+      id: id(),
+      tenantId: A.t.id,
+      employeeId: A.emp.id,
+      type: 'OUT',
+      serverTs: new Date(),
+      workDate: new Date('2026-11-25T00:00:00Z'),
+      source: 'SYSTEM',
+    },
+  }),
+);
 console.table(results);
 await db.$disconnect();
 process.exit(results.some((r) => r[1] !== 'pass') ? 1 : 0);

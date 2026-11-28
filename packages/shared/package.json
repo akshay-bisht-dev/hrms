@@ -16,6 +16,7 @@
     "./schemas/attendance": "./src/schemas/attendance.js",
     "./schemas/leave": "./src/schemas/leave.js",
     "./schemas/payroll": "./src/schemas/payroll.js",
+    "./schemas/work": "./src/schemas/work.js",
     "./quantity": "./src/quantity.js"
   },
   "scripts": {

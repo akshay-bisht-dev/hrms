@@ -9,6 +9,7 @@ import { employeesRouter } from '../modules/employees/employees.routes.js';
 import { attendanceRouter } from '../modules/attendance/attendance.routes.js';
 import { leaveRouter } from '../modules/leave/leave.routes.js';
 import { payrollRouter } from '../modules/payroll/payroll.routes.js';
+import { workRouter } from '../modules/work/work.routes.js';
 
 /**
  * Mounts all /api/v1 module routers. Every route must declare its access ('public', 'authenticated' or a
@@ -22,6 +23,7 @@ import { payrollRouter } from '../modules/payroll/payroll.routes.js';
  * @param {Parameters<typeof attendanceRouter>[0]} [services.attendanceRoutes]
  * @param {Parameters<typeof leaveRouter>[0]} [services.leaveRoutes]
  * @param {Parameters<typeof payrollRouter>[0]} [services.payrollRoutes]
+ * @param {Parameters<typeof workRouter>[0]} [services.workRoutes]
  * @returns {import('express').Router}
  */
 export function apiRouter(services) {
@@ -65,6 +67,11 @@ export function apiRouter(services) {
     const payroll = payrollRouter(services.payrollRoutes);
     /** @type {any} */ (payroll).__mountpath = '/payroll';
     router.use('/payroll', payroll);
+  }
+  if (services?.workRoutes) {
+    const work = workRouter(services.workRoutes);
+    /** @type {any} */ (work).__mountpath = '/work';
+    router.use('/work', work);
   }
   assertRoutesDeclared(router);
   return router;

@@ -130,6 +130,27 @@ beforeAll(async () => {
     effectiveFrom: '2026-01-05',
   });
   ids.assignment = (await A.call('get', '/attendance/shift-assignments').expect(200)).body.data[0].id;
+  // Work status: a finished session with a correction request, a WFH request and the default policy.
+  // (Before the clock-in below: ending a session clocks out, and A must still be clocked in at the end.)
+  await post('/work/sessions', { workLocationId: ids.workLocation });
+  const workDay = (await A.call('post', '/work/sessions/current/end').send({}).expect(200)).body;
+  const workSession = workDay.today.at(-1);
+  ids.workSession = workSession.id;
+  ids.workCorrection = (
+    await post('/work/corrections', {
+      sessionId: workSession.id,
+      kind: 'ADD_WORK_TIME',
+      fromTs: workSession.startedAt,
+      toTs: workSession.endedAt,
+      reason: 'A forgot something',
+    })
+  ).id;
+  ids.homeLocation = (await post('/companies/work-locations', { name: 'A home', type: 'WFH' })).id;
+  const wfhDay = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10);
+  ids.wfhRequest = (
+    await post('/work/wfh-requests', { workLocationId: ids.homeLocation, fromDate: wfhDay, toDate: wfhDay })
+  ).id;
+  ids.workPolicy = (await A.call('get', '/work/policies').expect(200)).body.data[0].id;
   await post('/attendance/punches', { type: 'IN', workLocationId: ids.workLocation });
   const yesterday = new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10);
   const correction = await post('/attendance/regularizations', {
@@ -210,6 +231,17 @@ function fixtureFor(method, path) {
     [/^\/companies\/holiday-calendars\/:id$/, { id: ids.calendar }, { name: 'Pwned' }],
     [/^\/companies\/work-locations\/:id$/, { id: ids.workLocation }, { name: 'Pwned' }],
     [/^\/attendance\/shifts\/:id$/, { id: ids.shift }, { name: 'Pwned' }],
+    [/^\/work\/sessions\/:id$/, { id: ids.workSession }, undefined],
+    [/^\/work\/corrections\/:id\/cancel$/, { id: ids.workCorrection }, undefined],
+    [/^\/work\/corrections\/:id\/decision$/, { id: ids.workCorrection }, { decision: 'APPROVED' }],
+    [/^\/work\/wfh-requests\/:id\/cancel$/, { id: ids.wfhRequest }, undefined],
+    [/^\/work\/wfh-requests\/:id\/decision$/, { id: ids.wfhRequest }, { decision: 'APPROVED' }],
+    [
+      /^\/work\/policies\/:id\/versions$/,
+      { id: ids.workPolicy },
+      { appliesTo: 'COMPANY', effectiveFrom: new Date(Date.now() + 86_400_000).toISOString().slice(0, 10) },
+    ],
+    [/^\/work\/policies\/:id\/retire$/, { id: ids.workPolicy }, undefined],
     [/^\/leaves\/(balances|ledger)\/:id$/, { id: ids.employee }, undefined],
     [/^\/payroll\/legal-entities\/:id\/statutory-keys$/, { id: ids.legalEntity }, undefined],
     [
@@ -398,6 +430,11 @@ test("tenant B's lists never contain tenant A's records", async () => {
     '/leaves/calendar?from=2030-01-01&to=2030-01-31',
     '/leaves/reports/summary?from=2030-01-01&to=2030-01-31',
     `/attendance/days?date=${new Date().toISOString().slice(0, 10)}`,
+    '/work/me/status',
+    '/work/policies',
+    '/work/team',
+    '/work/wfh-requests?view=approvals',
+    '/work/corrections?view=approvals',
     `/attendance/reports/summary?from=2026-01-05&to=2026-03-31`,
   ];
   const aIds = Object.entries(ids)
@@ -471,6 +508,10 @@ test("tenant B cannot create records that point at tenant A's records", async ()
         effectiveFrom: '2026-01-01',
       },
     ],
+    [
+      '/work/policies',
+      { name: 'X', appliesTo: 'EMPLOYEE', targetId: ids.employee, effectiveFrom: '2030-01-01' },
+    ],
   ];
   for (const [path, body] of cases) {
     const res = await B.call('post', path).send(body);
@@ -530,6 +571,13 @@ test("tenant A's data is unchanged after all of that", async () => {
   expect(
     (await A.call('get', `/payroll/employees/${ids.employee}/salaries`).expect(200)).body.data,
   ).toHaveLength(1);
+  expect((await A.call('get', `/work/sessions/${ids.workSession}`).expect(200)).body.status).toBe('ENDED');
+  const aCorrections = (await A.call('get', '/work/corrections').expect(200)).body.data;
+  expect(aCorrections.find((c) => c.id === ids.workCorrection).status).toBe('PENDING');
+  const aWfh = (await A.call('get', '/work/wfh-requests').expect(200)).body.data;
+  expect(aWfh.find((r) => r.id === ids.wfhRequest).status).toBe('PENDING');
+  const aPolicies = (await A.call('get', '/work/policies').expect(200)).body.data;
+  expect(aPolicies.find((p) => p.id === ids.workPolicy)).toMatchObject({ version: 1, effectiveTo: null });
   // B's HR cannot adjust A's employee's balance either.
   await B.call('post', '/leaves/adjustments')
     .send({

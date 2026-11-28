@@ -32,7 +32,13 @@
     "payroll": "Payroll",
     "payslips": "My payslips",
     "payrollRuns": "Payroll runs",
-    "payrollSettings": "Payroll"
+    "payrollSettings": "Payroll",
+    "work": "Work",
+    "myWork": "My work",
+    "teamWork": "Team status",
+    "workSettings": "Work policies",
+    "workSignal": "Work session running · signal on",
+    "workOnBreak": "On a break · session running"
   },
   "status": {
     "title": "System status",
@@ -655,7 +661,10 @@
     "leave": "Leave requests",
     "afternoon": "afternoon",
     "morning": "morning",
-    "documentAttached": "Supporting document attached"
+    "documentAttached": "Supporting document attached",
+    "wfh": "Work-from-home requests",
+    "workCorrections": "Work-session corrections",
+    "sessionWas": "Session {{from}} – {{to}}"
   },
   "attReport": {
     "title": "Attendance report",
@@ -1182,6 +1191,167 @@
       "payDay": "Pay day",
       "payDayHint": "Empty: last day of the month",
       "lopFromAbsence": "Absent days count as loss of pay (in addition to unpaid leave)"
+    }
+  },
+  "work": {
+    "title": "My work",
+    "subtitle": "Start a session when you begin work, wherever you are. Times are shown in {{tz}}.",
+    "subtitleNoRecord": "Work sessions record when you work and your breaks.",
+    "session": {
+      "title": "Work session",
+      "none": "No session running",
+      "since": "Session started at {{time}}",
+      "onBreakSince": "on a break since {{time}}",
+      "workedToday": "Worked today",
+      "disconnected": "Disconnected",
+      "location": "Where are you working?",
+      "needsApproval": "{{name}} (needs an approved request)",
+      "start": "Start work",
+      "breakType": "Break",
+      "startBreak": "Start break",
+      "endBreak": "Back to work",
+      "end": "End work",
+      "policyNote": "If the signal stops for more than {{timeout}} minutes, that time shows as disconnected. After {{window}} minutes without a signal the session closes at the last signal. Allowed hours: {{from}}–{{to}}."
+    },
+    "sessionStatus": {
+      "ACTIVE": "Working",
+      "ON_BREAK": "On a break",
+      "DISCONNECTED": "Disconnected",
+      "ENDED": "Ended",
+      "AUTO_CLOSED": "Closed automatically"
+    },
+    "breakType": {
+      "REGULAR": "Short break",
+      "MEAL": "Meal",
+      "PERSONAL": "Personal"
+    },
+    "segment": {
+      "WORK": "Worked",
+      "BREAK": "Break",
+      "IDLE": "Idle",
+      "DISCONNECTED": "Disconnected",
+      "REMOVED": "Removed by correction"
+    },
+    "disclosure": {
+      "title": "What is recorded",
+      "recorded": "Recorded",
+      "notRecorded": "Never recorded"
+    },
+    "today": {
+      "title": "Today",
+      "none": "No sessions yet today.",
+      "now": "now",
+      "totals": "Worked {{worked}} · breaks {{breaks}} · disconnected {{lost}}",
+      "needsReview": "Check this session",
+      "fix": "Ask for a correction"
+    },
+    "correction": {
+      "title": "Ask for a correction",
+      "help": "Your manager decides. The original record is kept; an approved correction is added on top of it.",
+      "kind": "What happened",
+      "from": "From",
+      "to": "To",
+      "stoppedAt": "You stopped working at",
+      "closedAt": "When the session was closed",
+      "reason": "What happened? (required)",
+      "submit": "Send request",
+      "mine": "My session corrections"
+    },
+    "correctionKind": {
+      "ADD_WORK_TIME": "I was working (add time)",
+      "REMOVE_WORK_TIME": "I was not working (remove time)",
+      "MARK_BREAK": "That was a break",
+      "MISSING_CHECKOUT": "I forgot to end the session",
+      "IDLE_DISPUTE": "I was working while marked idle",
+      "DISCONNECT_DISPUTE": "I was working while disconnected"
+    },
+    "wfh": {
+      "title": "Work from home",
+      "help": "Ask in advance to work from home or another location that needs approval.",
+      "helpLimit": "Ask in advance to work from home. Your policy allows up to {{count}} days a month.",
+      "location": "Location",
+      "from": "From",
+      "to": "To",
+      "weekdays": "Only on these days (optional)",
+      "weekdaysHint": "For a regular pattern, e.g. every Monday and Wednesday. Leave empty for every day in the range.",
+      "reason": "Reason (optional)",
+      "submit": "Send request",
+      "none": "No requests yet.",
+      "sent_one": "Request sent for {{count}} day.",
+      "sent_other": "Request sent for {{count}} days.",
+      "days_one": "{{count}} day",
+      "days_other": "{{count}} days"
+    }
+  },
+  "teamWork": {
+    "title": "Team status",
+    "subtitle": "Who is working right now and today’s totals.",
+    "counts": "Totals by status",
+    "filter": "Show",
+    "everyone": "Everyone",
+    "asOf": "Updated {{time}}",
+    "none": "Nobody matches.",
+    "state": {
+      "WORKING": "Working",
+      "ON_BREAK": "On a break",
+      "DISCONNECTED": "Disconnected",
+      "FINISHED": "Finished",
+      "NOT_STARTED": "Not started"
+    },
+    "col": {
+      "person": "Person",
+      "state": "Status",
+      "since": "Since",
+      "location": "Location",
+      "worked": "Worked today",
+      "breaks": "Breaks",
+      "signal": "Last signal"
+    },
+    "privacy": "This page shows work status only: start and end times, breaks and whether the app is open. It never shows screens, applications, keystrokes or activity."
+  },
+  "workSettings": {
+    "title": "Work policies",
+    "subtitle": "Work from home, allowed hours, and how disconnected and abandoned sessions are handled. Work locations are set up in",
+    "locationsLink": "Attendance settings",
+    "noAccess": "You do not have access to work policies.",
+    "policies": "Policies",
+    "new": "New policy",
+    "change": "Change",
+    "retire": "Retire",
+    "changeTitle": "Change {{name}}",
+    "inForce": "In force",
+    "ended": "Ended",
+    "upcoming": "Starts later",
+    "wfhApproval": "WFH with approval",
+    "wfhFree": "WFH without approval",
+    "wfhOff": "No WFH",
+    "wfhMax_one": "up to {{count}} day a month",
+    "wfhMax_other": "up to {{count}} days a month",
+    "summary": "Hours {{from}}–{{to}} · disconnected after {{timeout}} min · closes after {{window}} min without a signal",
+    "versions_one": "{{count}} version",
+    "versions_other": "{{count}} versions",
+    "newHelp": "The most specific policy applies: a person’s own, then their department, branch, legal entity, then company-wide.",
+    "versionHelp": "Saving creates a new version from the date you choose. Sessions already started keep the version they began with.",
+    "create": "Create policy",
+    "saveVersion": "Save new version",
+    "f": {
+      "name": "Name",
+      "effectiveFrom": "Starts on",
+      "allowedStart": "Earliest start",
+      "allowedEnd": "Latest end",
+      "allowedEndHint": "HH:MM, or 24:00 for end of day",
+      "heartbeatTimeoutSec": "Disconnected after (seconds)",
+      "heartbeatHint": "At least 120. The app sends a signal about once a minute.",
+      "resumeWindowMin": "Close abandoned sessions after (minutes)",
+      "resumeHint": "The session is closed at its last signal and flagged for review.",
+      "maxBreakMinutes": "Longest break (minutes)",
+      "priority": "Priority",
+      "priorityHint": "Breaks ties between policies at the same level.",
+      "optional": "Optional",
+      "wfh": "Work from home",
+      "wfhAllowed": "People may work from home",
+      "wfhRequiresApproval": "Each work-from-home day needs an approved request",
+      "wfhMaxDaysPerMonth": "Most work-from-home days a month"
     }
   }
 }
