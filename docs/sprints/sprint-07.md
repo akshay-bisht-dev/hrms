@@ -1,6 +1,6 @@
 # Sprint 7 — Payroll core and the India pack
 
-Status: **Complete, awaiting owner approval** · Date: 2026-11-27 · Branch: `sprint-07/payroll`
+Status: **Approved** · Date: 2026-11-27 · Branch: `sprint-07/payroll`
 
 ## 1. Objectives
 A country-neutral payroll engine that pays people correctly, explains every number and cannot be changed once finalized, plus the first native country pack: **India** (chosen by the owner this sprint). Statutory rates live in versioned rule data, never in code. A payroll run moves through maker-checker approval to immutable payslips and a bank file.
@@ -151,4 +151,5 @@ README (the payroll package, the E2E sign-in limit), `.env.example` unchanged, S
 5. As the employee: My payslips → Download.
 
 ## 12. Approval
-Pending.
+
+Approved by the owner on 2026-11-28; merged to `main` through a pull request after CI passed. The India pack stays marked as awaiting in-country expert review.
