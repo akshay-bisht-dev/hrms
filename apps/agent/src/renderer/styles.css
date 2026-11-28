@@ -1,0 +1,142 @@
+:root {
+  color-scheme: light dark;
+  --bg: #f8fafc;
+  --surface: #fff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --primary: #2563eb;
+  --ok: #047857;
+  --warn: #b45309;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1220;
+    --surface: #111a2e;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --border: #1e293b;
+  }
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font:
+    14px/1.5 system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+h1 {
+  font-size: 15px;
+  margin: 0;
+}
+h2 {
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+.logo {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+}
+main {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+}
+.banner {
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 600;
+}
+.banner.on {
+  background: #fef3c7;
+  color: #78350f;
+}
+.banner.off {
+  background: #ecfdf5;
+  color: #065f46;
+}
+.muted {
+  color: var(--muted);
+  font-size: 13px;
+}
+label {
+  display: block;
+  font-weight: 600;
+  margin: 8px 0 4px;
+}
+input,
+select {
+  width: 100%;
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+button {
+  height: 38px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 14px;
+  background: var(--primary);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+button.secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.error {
+  color: #b91c1c;
+}
+ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+.notice {
+  white-space: pre-wrap;
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+}

@@ -8,7 +8,8 @@
     "packages/payroll",
     "apps/backend",
     "apps/worker",
-    "apps/frontend"
+    "apps/frontend",
+    "apps/agent"
   ],
   "engines": {
     "node": ">=22.12"

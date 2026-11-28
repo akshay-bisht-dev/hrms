@@ -1,0 +1,22 @@
+{
+  "name": "@hrms/agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Workforce HRMS desktop app: work sessions and, only where a company enabled and disclosed it, screenshots.",
+  "type": "module",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js"
+  },
+  "dependencies": {
+    "sharp": "^0.35.5"
+  },
+  "devDependencies": {
+    "electron": "39.8.10"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {}
+  }
+}

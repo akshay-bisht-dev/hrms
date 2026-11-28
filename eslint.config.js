@@ -48,6 +48,22 @@ export default [
     },
   },
   {
+    // Desktop app status window: browser globals only (sandboxed, no Node.js); no HTML injection.
+    files: ['apps/agent/src/renderer/**/*.js'],
+    languageOptions: { globals: { ...globals.browser } },
+    rules: {
+      'no-restricted-properties': [
+        'error',
+        { property: 'innerHTML', message: 'Build DOM nodes; never inject HTML.' },
+        { property: 'outerHTML', message: 'Build DOM nodes; never inject HTML.' },
+      ],
+    },
+  },
+  {
+    files: ['apps/agent/src/preload/**/*.cjs'],
+    languageOptions: { sourceType: 'commonjs', globals: { ...globals.node } },
+  },
+  {
     files: ['apps/frontend/src/**/*.test.{js,jsx}', 'apps/frontend/test/**/*.{js,jsx}'],
     plugins: { react },
     languageOptions: {
