@@ -10,6 +10,7 @@ import { createNotificationsProcessor } from './processors/notifications.js';
 import { createFilesProcessor, createImportsProcessor } from './processors/tenant-jobs.js';
 import { createWorkSessionsProcessor } from './processors/work-sessions.js';
 import { createAttendanceService } from '@hrms/backend/modules/attendance/attendance.service.js';
+import { createWorkService } from '@hrms/backend/modules/work/work.service.js';
 import { createLeaveService } from '@hrms/backend/modules/leave/leave.service.js';
 import { createPayrollConfigService } from '@hrms/backend/modules/payroll/config.service.js';
 import { createPayrollRunService } from '@hrms/backend/modules/payroll/run.service.js';
@@ -61,6 +62,7 @@ const employees = createEmployeesService({
 const imports = createImportsService({ employees, files, buckets });
 const attendance = createAttendanceService();
 const leave = createLeaveService({ attendance });
+const work = createWorkService({ attendance });
 const payrollConfig = createPayrollConfigService();
 const payrollRuns = createPayrollRunService({
   config: payrollConfig,
@@ -101,6 +103,7 @@ const workers = [
         employees,
         leave,
         payrollRuns,
+        work,
         platformDb,
         queue: workSessionsQueue,
         logger,

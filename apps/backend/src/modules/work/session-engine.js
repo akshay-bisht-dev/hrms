@@ -76,7 +76,13 @@ export function computeTimeline({ events, policy, now, lastHeartbeatAt = null })
   if (!startEv) throw new Error('A session needs a START event');
   const start = startEv.serverTs.getTime();
   const closing = sorted.find((e) => e.type === 'END' || e.type === 'AUTO_CLOSED');
-  let end = closing ? closing.serverTs.getTime() : Math.max(start, now.getTime());
+  // An automatic close is recorded when the sweeper notices, but the session ended at its last sign of life.
+  const closedAt = closing
+    ? closing.meta?.endAt
+      ? new Date(closing.meta.endAt).getTime()
+      : closing.serverTs.getTime()
+    : null;
+  let end = closedAt !== null ? Math.max(start, closedAt) : Math.max(start, now.getTime());
   const corrections = sorted.filter((e) => e.type === 'CORRECTION_APPLIED' && e.meta);
   for (const c of corrections)
     if (c.meta.kind === 'MISSING_CHECKOUT' && closing) end = Math.max(end, new Date(c.meta.toTs).getTime());

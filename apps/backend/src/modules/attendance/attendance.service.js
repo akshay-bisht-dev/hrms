@@ -20,6 +20,9 @@ import { anyOf, employeeScope } from '../employees/scope.js';
 import { DEFAULT_POLICY, MAX_SESSION_HOURS, computeDay, resolvePlan } from './engine.js';
 
 const ctx = () => /** @type {any} */ (currentContext());
+const activeKey = (/** @type {string} */ employeeId) => ({
+  tenantId_employeeId: { tenantId: ctx().tenantId, employeeId },
+});
 const fullName = (/** @type {any} */ e) => [e.firstName, e.lastName].filter(Boolean).join(' ');
 const MAX_RANGE_DAYS = 93;
 
@@ -436,6 +439,11 @@ export function createAttendanceService({ queues, now = () => new Date() } = {})
       if (input.type === 'IN' && open)
         throw new ConflictError('already_clocked_in', 'You are already clocked in');
       if (input.type === 'OUT' && !open) throw new ConflictError('not_clocked_in', 'You are not clocked in');
+      if (input.type === 'OUT' && (await db().employeeActiveSession.findUnique({ where: activeKey(emp.id) })))
+        throw new ConflictError(
+          'work_session_open',
+          'You have a work session running. End it on My work, which also clocks you out.',
+        );
 
       let workLocationId = open?.workLocationId ?? null;
       if (input.type === 'IN' && input.workLocationId) {
@@ -468,6 +476,34 @@ export function createAttendanceService({ queues, now = () => new Date() } = {})
       });
       await recomputeDay(emp, workDate);
       return service.status();
+    },
+
+    /**
+     * Clock-in and clock-out that follow a work session (start, end, or an automatic close at the last heartbeat).
+     * Does nothing when the attendance state already matches, so a person who clocked in on the attendance page
+     * can start a work session without a second IN. The location was already checked by the work-session rules.
+     * @param {string} employeeId
+     * @param {{ type: 'IN' | 'OUT', at: Date, source: 'WEB' | 'SYSTEM', workLocationId?: string | null }} p
+     */
+    async recordWorkPunch(employeeId, { type, at, source, workLocationId = null }) {
+      const emp = await loadEmployee(employeeId);
+      if (!emp) throw new NotFoundError();
+      const open = await openPunch(emp.id);
+      if (type === 'IN' && open) return null;
+      if (type === 'OUT' && !open) return null;
+      const workDate = open ? /** @type {string} */ (dateToYmd(open.workDate)) : await workDateForIn(emp, at);
+      await db().attendancePunch.create({
+        data: {
+          id: newId(),
+          employeeId: emp.id,
+          type,
+          serverTs: at,
+          source,
+          workLocationId: type === 'IN' ? workLocationId : (open?.workLocationId ?? null),
+          workDate: ymdToDate(workDate),
+        },
+      });
+      return recomputeDay(emp, workDate);
     },
 
     /** @param {string} from @param {string} to */

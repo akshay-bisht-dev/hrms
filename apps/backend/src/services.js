@@ -14,6 +14,7 @@ import { createAttendanceService } from './modules/attendance/attendance.service
 import { createLeaveService } from './modules/leave/leave.service.js';
 import { createPayrollConfigService } from './modules/payroll/config.service.js';
 import { createPayrollRunService } from './modules/payroll/run.service.js';
+import { createWorkService } from './modules/work/work.service.js';
 
 /**
  * Builds module services from infrastructure clients. Shared by server.js and the integration tests,
@@ -54,6 +55,7 @@ export function buildServices({ env, logger, redis, queues, breachCheck, files }
     buckets,
     queues,
   });
+  const work = createWorkService({ attendance, mfaEnforce: env.MFA_ENFORCE_FOR_SENSITIVE ?? true });
   return {
     jwt,
     auth,
@@ -64,6 +66,7 @@ export function buildServices({ env, logger, redis, queues, breachCheck, files }
     leave,
     payrollConfig,
     payrollRuns,
+    work,
     files: files_,
     access: accessControl,
     routes: {
@@ -82,6 +85,7 @@ export function buildServices({ env, logger, redis, queues, breachCheck, files }
       attendanceRoutes: { access: accessControl, attendance },
       leaveRoutes: { access: accessControl, leave },
       payrollRoutes: { access: accessControl, config: payrollConfig, runs: payrollRuns },
+      workRoutes: { access: accessControl, work },
     },
   };
 }

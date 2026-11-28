@@ -23,6 +23,9 @@ export const WorkSessionJobs = {
   'employment-apply-due-tenant': z.object({ tenantId: z.uuid() }).strict(),
   /** Repeatable (daily): fans out leave accruals for the current month; credits are idempotent per period. */
   'leave-accrual': z.object({}).strict(),
+  /** Repeatable (every minute): marks silent sessions disconnected and closes abandoned ones. */
+  'work-session-sweep': z.object({}).strict(),
+  'work-session-sweep-tenant': z.object({ tenantId: z.uuid() }).strict(),
   'payroll-calculate': z.object({ tenantId: z.uuid(), userId: z.uuid(), runId: z.uuid() }).strict(),
   'payroll-payslips': z.object({ tenantId: z.uuid(), runId: z.uuid() }).strict(),
   'leave-accrual-tenant': z
@@ -40,10 +43,10 @@ export const WorkSessionJobs = {
 export const LIVE_TENANT_STATUSES = ['TRIAL', 'ACTIVE', 'PAST_DUE'];
 
 /**
- * Processor for the `work-sessions` queue: attendance roll-up and recalculation, and applying
+ * Processor for the `work-sessions` queue: the work-session sweeper, attendance roll-up and recalculation, and applying
  * future-dated employment changes. Tenant jobs run inside the tenant's context so the tenant-scoped
  * client applies exactly as for API requests.
- * @param {{ attendance: any, employees: any, leave?: any, payrollRuns?: any, platformDb: () => any, queue: { add: Function },
+ * @param {{ attendance: any, employees: any, leave?: any, payrollRuns?: any, work?: any, platformDb: () => any, queue: { add: Function },
  *           logger: import('pino').Logger, now?: () => Date }} deps
  */
 export function createWorkSessionsProcessor({
@@ -51,20 +54,24 @@ export function createWorkSessionsProcessor({
   employees,
   leave,
   payrollRuns,
+  work,
   platformDb,
   queue,
   logger,
   now = () => new Date(),
 }) {
-  /** One child job per live tenant; the job id makes a repeated fan-out in the same hour a no-op. @param {string} child */
-  async function fanOut(child) {
+  /**
+   * One child job per live tenant; the job id makes a repeated fan-out in the same hour (or minute) a no-op.
+   * @param {string} child @param {'hour' | 'minute'} [bucket]
+   */
+  async function fanOut(child, bucket = 'hour') {
     const tenants = await platformDb().tenant.findMany({
       where: { status: { in: LIVE_TENANT_STATUSES } },
       select: { id: true },
     });
     const hour = now()
       .toISOString()
-      .slice(0, 13)
+      .slice(0, bucket === 'minute' ? 16 : 13)
       .replace(/[^0-9]/g, '');
     for (const t of tenants)
       await queue.add(child, { tenantId: t.id }, { jobId: `${child}-${t.id}-${hour}` });
@@ -85,6 +92,14 @@ export function createWorkSessionsProcessor({
         return fanOut('employment-apply-due-tenant');
       case 'leave-accrual':
         return fanOut('leave-accrual-tenant');
+      case 'work-session-sweep':
+        return fanOut('work-session-sweep-tenant', 'minute');
+      case 'work-session-sweep-tenant': {
+        const out = await inTenant(() => work.sweep());
+        if (out.disconnected || out.closed)
+          logger.info({ tenantId: data.tenantId, ...out }, 'Work sessions swept');
+        return out;
+      }
       case 'payroll-calculate': {
         const out = await inTenant(() => payrollRuns.calculate(data.runId), data.userId);
         logger.info(

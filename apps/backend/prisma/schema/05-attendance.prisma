@@ -89,6 +89,8 @@ enum PunchSource {
   BIOMETRIC
   IMPORT
   CORRECTION
+  /** Written by the system, e.g. when an abandoned work session is closed at its last heartbeat. */
+  SYSTEM
 }
 
 model AttendanceDay {

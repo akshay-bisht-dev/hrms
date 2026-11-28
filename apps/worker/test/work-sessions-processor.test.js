@@ -46,6 +46,12 @@ function setup() {
         return { applied: 1, skipped: 0 };
       },
     },
+    work: {
+      sweep: async () => {
+        calls.push(['sweep', currentContext().tenantId]);
+        return { checked: 4, disconnected: 1, closed: 1 };
+      },
+    },
     logger: { info() {} },
     now: () => new Date('2026-11-25T10:42:00Z'),
   };
@@ -106,4 +112,19 @@ test('bad payloads and unknown jobs are rejected', async () => {
     process(job('attendance-recalculate', { tenantId: T1, userId: U, from: 'x', to: 'y' })),
   ).rejects.toThrow();
   await expect(process(job('drop-tables'))).rejects.toThrow(/Unknown work-sessions job/);
+});
+
+test('the work-session sweeper fans out every minute and sweeps inside each tenant', async () => {
+  const { process, added, calls } = setup();
+  expect(await process(job('work-session-sweep'))).toEqual({ tenants: 2 });
+  expect(added.map((a) => a.jobId)).toEqual([
+    `work-session-sweep-tenant-${T1}-202611251042`,
+    `work-session-sweep-tenant-${T2}-202611251042`,
+  ]);
+  expect(await process(job('work-session-sweep-tenant', { tenantId: T2 }))).toEqual({
+    checked: 4,
+    disconnected: 1,
+    closed: 1,
+  });
+  expect(calls.at(-1)).toEqual(['sweep', T2]);
 });

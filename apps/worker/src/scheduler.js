@@ -8,10 +8,18 @@ import { loadWorkerConfig } from './config.js';
 /**
  * Registers repeatable jobs. `upsertJobScheduler` is idempotent by scheduler id, so running this twice
  * (e.g. during a deploy overlap) never creates duplicate schedules.
- * Later sprints add: stale-session sweeper (every minute), retention sweep (nightly), accruals (monthly) …
+ * Later sprints add: retention sweep (nightly) …
  */
 export const SCHEDULES = [
   { queue: QUEUES.SYSTEM, id: 'system-heartbeat', every: 60_000, name: 'heartbeat', data: {} },
+  // Marks work sessions without a heartbeat as disconnected and closes abandoned ones at their last heartbeat.
+  {
+    queue: QUEUES.WORK_SESSIONS,
+    id: 'work-session-sweep',
+    every: 60_000,
+    name: 'work-session-sweep',
+    data: {},
+  },
   // Closes finished days (absent, missing clock-out) and refreshes the last two days in every company.
   {
     queue: QUEUES.WORK_SESSIONS,

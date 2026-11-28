@@ -96,6 +96,13 @@ describe('scenarios', () => {
     expect(min(asBreak.totals.breakSec)).toBe(10);
   });
 
+  test('an automatic close ends the session at the recorded last sign of life', () => {
+    const t = run([ev('START', 0), ...beats(1, 30), ev('AUTO_CLOSED', 160, { endAt: at(30) })]);
+    expect(t.endedAt).toEqual(at(30));
+    expect(min(t.totals.workedSec)).toBe(30);
+    expect(t.totals.disconnectedSec).toBe(0);
+  });
+
   test('a missing check-out correction extends an auto-closed session', () => {
     const autoClosed = [ev('START', 0), ...beats(1, 30), ev('AUTO_CLOSED', 30)];
     expect(min(run(autoClosed).totals.workedSec)).toBe(30);
